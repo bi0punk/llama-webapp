@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <h3 class="mb-0">Model Manager</h3>
+    <div class="small-muted">Descarga GGUF, gestiona inventario local y ejecuta en llama.cpp</div>
+  </div>
+  <form method="post" action="/models/import_registry">
+    <button class="btn btn-sm btn-outline-primary">Importar registry (seed)</button>
+  </form>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <h5 class="card-title">Agregar modelo (URL directa)</h5>
+    <form method="post" action="/models/add" class="row g-2">
+      <div class="col-md-4">
+        <label class="form-label">Nombre archivo</label>
+        <input class="form-control" name="name" placeholder="mistral-q4_k_m.gguf" required>
+      </div>
+      <div class="col-md-8">
+        <label class="form-label">URL (HuggingFace resolve o URL directa)</label>
+        <input class="form-control" name="url" placeholder="https://huggingface.co/.../resolve/main/xxx.gguf?download=true" required>
+      </div>
+      <input type="hidden" name="source_type" value="direct_url" />
+      <div class="col-12">
+        <button class="btn btn-success">Guardar</button>
+        <span class="small-muted ms-2">Si el modelo está gated/privado, define <span class="mono">HUGGING_FACE_TOKEN</span> en el entorno.</span>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="models-table" hx-get="/partials/models_table" hx-trigger="load, every 2s" hx-swap="innerHTML">
+  <!-- HTMX loads table -->
+</div>
+
+{% endblock %}

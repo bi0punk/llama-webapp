@@ -1,0 +1,7 @@
+[
+  {
+    "name": "gpt-oss-20b-Q4_K_M.gguf",
+    "source_type": "direct_url",
+    "url": "https://huggingface.co/unsloth/gpt-oss-20b-GGUF/resolve/main/gpt-oss-20b-Q4_K_M.gguf?download=true"
+  }
+]
