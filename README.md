@@ -48,3 +48,15 @@ Se guardan en `./data`:
 - Modelos grandes (20B) en CPU requieren mucha RAM y van lentos. Para producción, añade flags y/o GPU layers.
 - Este MVP ejecuta `llama-run` por request (stateless). Luego lo podemos evolucionar a modo servidor con contexto.
 
+
+
+## Modelos sugeridos (seed)
+La pantalla **Modelos** muestra una lista de modelos “listos para descargar” definida en:
+
+- `app/model_registry.json`
+
+Puedes:
+- **Agregar** (solo registra en DB)
+- **Agregar + Descargar** (crea el modelo y lanza el job)
+
+Si un modelo es **gated/privado**, debes definir `HUGGING_FACE_TOKEN` (y reiniciar los contenedores).

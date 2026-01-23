@@ -10,7 +10,8 @@ services:
       DATA_DIR: /data
       DATABASE_URL: sqlite:////data/app.db
       HUGGING_FACE_TOKEN: ${HUGGING_FACE_TOKEN-}
-      LLAMA_RUN_BIN: /usr/local/bin/llama-run
+      LLAMA_RUN_BIN: /opt/llama/bin/llama-run
+      LLAMA_CLI_BIN: /opt/llama/bin/llama-cli
       REDIS_URL: redis://redis:6379/0
     volumes:
       - ./data:/data
@@ -27,7 +28,8 @@ services:
       DATA_DIR: /data
       DATABASE_URL: sqlite:////data/app.db
       HUGGING_FACE_TOKEN: ${HUGGING_FACE_TOKEN-}
-      LLAMA_RUN_BIN: /usr/local/bin/llama-run
+      LLAMA_RUN_BIN: /opt/llama/bin/llama-run
+      LLAMA_CLI_BIN: /opt/llama/bin/llama-cli
       REDIS_URL: redis://redis:6379/0
     volumes:
       - ./data:/data

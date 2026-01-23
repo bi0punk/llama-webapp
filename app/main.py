@@ -14,7 +14,7 @@ from fastapi.templating import Jinja2Templates
 from redis import Redis
 from rq import Queue
 
-from app.config import DATA_DIR, LLAMA_RUN_BIN, MODELS_DIR, REDIS_URL
+from app.config import DATA_DIR, HUGGING_FACE_TOKEN, LLAMA_CLI_BIN, LLAMA_RUN_BIN, MODELS_DIR, REDIS_URL
 from app.db import engine, session_scope
 from app.models import Base, Job, Model
 from app.tasks import download_model
@@ -47,12 +47,73 @@ def get_models_and_jobs() -> Dict[str, Any]:
         return {"models": models, "jobs": jobs}
 
 
+
+def load_registry() -> list[dict[str, Any]]:
+    """Load bundled model registry shown in UI (seed suggestions)."""
+    registry_path = BASE_DIR / "model_registry.json"
+    if not registry_path.exists():
+        return []
+    try:
+        entries = json.loads(registry_path.read_text(encoding="utf-8"))
+        if isinstance(entries, list):
+            return entries
+    except Exception:
+        return []
+    return []
+
+
+def pick_llama_bin() -> str:
+    """Prefer llama-run; fallback to llama-cli."""
+    if Path(LLAMA_RUN_BIN).exists():
+        return LLAMA_RUN_BIN
+    if Path(LLAMA_CLI_BIN).exists():
+        return LLAMA_CLI_BIN
+    return LLAMA_RUN_BIN  # for error message
+
+
 def _ensure_llama_bin() -> None:
-    if not Path(LLAMA_RUN_BIN).exists():
+    chosen = pick_llama_bin()
+    if not Path(chosen).exists():
         raise HTTPException(
             status_code=500,
-            detail=f"llama-run binary not found at {LLAMA_RUN_BIN}. Check your Docker build.",
+            detail=(
+                "llama.cpp binary not found. Tried: "
+                f"{LLAMA_RUN_BIN} and {LLAMA_CLI_BIN}. "
+                "Check your Docker build."
+            ),
         )
+
+
+def build_llama_cmd(model_path: str, prompt: str, threads: int, temp: float, ctx: int) -> list[str]:
+    """Build command line for llama-run or llama-cli depending on what's available."""
+    chosen = pick_llama_bin()
+    if Path(chosen).name == "llama-cli":
+        # llama-cli uses flags instead of positional model+prompt
+        return [
+            chosen,
+            "-m",
+            model_path,
+            "-t",
+            str(threads),
+            "-c",
+            str(ctx),
+            "--temp",
+            str(temp),
+            "-p",
+            prompt,
+        ]
+    # llama-run: positional model path then prompt
+    return [
+        chosen,
+        model_path,
+        "--threads",
+        str(threads),
+        "--temp",
+        str(temp),
+        "--context-size",
+        str(ctx),
+        prompt,
+    ]
 
 
 # --------- pages ---------
@@ -65,11 +126,15 @@ def root() -> RedirectResponse:
 @app.get("/models", response_class=HTMLResponse)
 def models_page(request: Request):
     data = get_models_and_jobs()
+    registry = load_registry()
+    has_token = bool(HUGGING_FACE_TOKEN)
     return templates.TemplateResponse(
         "models.html",
         {
             "request": request,
             "models": data["models"],
+            "registry": registry,
+            "has_token": has_token,
         },
     )
 
@@ -148,6 +213,37 @@ def add_model(
         m = Model(name=name.strip(), url=url.strip(), source_type=source_type.strip() or "direct_url")
         s.add(m)
     return RedirectResponse(url="/models", status_code=303)
+
+
+
+@app.post("/models/add_and_download")
+def add_and_download(
+    name: str = Form(...),
+    url: str = Form(...),
+    source_type: str = Form("direct_url"),
+) -> RedirectResponse:
+    """Create model entry and enqueue download in one click."""
+    with session_scope() as s:
+        model = Model(name=name.strip(), url=url.strip(), source_type=source_type.strip() or "direct_url")
+        s.add(model)
+        s.flush()
+        model_id = model.id
+
+        model.status = "DOWNLOADING"
+        job = Job(type="download", status="queued", progress=0, message=f"Downloading model {model_id}")
+        s.add(job)
+        s.flush()
+        job_id = job.id
+
+    rq_job = queue.enqueue(download_model, job_id, model_id, job_timeout="12h")
+
+    with session_scope() as s:
+        job = s.get(Job, job_id)
+        if job:
+            job.rq_job_id = rq_job.id
+
+    return RedirectResponse(url="/models", status_code=303)
+
 
 
 @app.post("/models/import_registry")
@@ -256,19 +352,20 @@ async def ws_chat(websocket: WebSocket):
             temp = float(params.get("temp") or 0.8)
             ctx = int(params.get("ctx") or 2048)
 
-            cmd = [
-                LLAMA_RUN_BIN,
-                model_path,
-                "--threads",
-                str(threads),
-                "--temp",
-                str(temp),
-                "--context-size",
-                str(ctx),
-                prompt,
-            ]
+            cmd = build_llama_cmd(model_path, prompt, threads, temp, ctx)
 
-            await websocket.send_text(f"\n[cmd] {' '.join(cmd[:-1])} <PROMPT>\n\n")
+            # pretty-print command without leaking full prompt
+            cmd_display = cmd.copy()
+            if "-p" in cmd_display:
+                pidx = cmd_display.index("-p")
+                if pidx + 1 < len(cmd_display):
+                    cmd_display[pidx + 1] = "<PROMPT>"
+            else:
+                # llama-run style: last arg is prompt
+                if len(cmd_display) > 0:
+                    cmd_display[-1] = "<PROMPT>"
+
+            await websocket.send_text(f"\n[cmd] {' '.join(cmd_display)}\n\n")
 
             # Run llama-run as subprocess and stream stdout
             proc = await asyncio.create_subprocess_exec(

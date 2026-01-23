@@ -14,7 +14,8 @@ DATA_DIR = env("DATA_DIR", "/data")
 DATABASE_URL = env("DATABASE_URL", f"sqlite:///{DATA_DIR}/app.db")
 REDIS_URL = env("REDIS_URL", "redis://redis:6379/0")
 HUGGING_FACE_TOKEN = env("HUGGING_FACE_TOKEN", "")
-LLAMA_RUN_BIN = env("LLAMA_RUN_BIN", "/usr/local/bin/llama-run")
+LLAMA_RUN_BIN = env("LLAMA_RUN_BIN", "/opt/llama/bin/llama-run")
+LLAMA_CLI_BIN = env("LLAMA_CLI_BIN", "/opt/llama/bin/llama-cli")
 
 # Where downloaded models live
 MODELS_DIR = os.path.join(DATA_DIR, "models")
