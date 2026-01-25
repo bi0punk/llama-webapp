@@ -15,7 +15,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /src
 
-# Descargar como tarball (más estable que git clone en redes inestables)
 RUN set -eux; \
     rm -rf llama.cpp /tmp/llama.tar.gz; \
     for i in 1 2 3 4 5; do \
@@ -29,10 +28,18 @@ RUN set -eux; \
     rm -f /tmp/llama.tar.gz
 
 WORKDIR /src/llama.cpp
+
+# Compila y "instala" a /opt/llama dentro del builder
 RUN set -eux; \
-    cmake -S . -B build -DCMAKE_BUILD_TYPE=Release; \
+    cmake -S . -B build \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=/opt/llama; \
     cmake --build build -j"$(nproc)"; \
-    ls -lah build/bin || true
+    cmake --install build; \
+    echo "=== installed tree ==="; \
+    find /opt/llama -maxdepth 3 -type f -print; \
+    echo "=== ldd llama-cli ==="; \
+    (ldd /opt/llama/bin/llama-cli || true)
 
 
 #############################
@@ -47,10 +54,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libstdc++6 libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-# llama.cpp bins
-RUN mkdir -p /opt/llama/bin
-COPY --from=llama_builder /src/llama.cpp/build/bin/ /opt/llama/bin/
+# Copiar instalación completa (bin + libs en ruta conocida)
+COPY --from=llama_builder /opt/llama /opt/llama
+
 RUN chmod +x /opt/llama/bin/* || true
+
+# Si hay libs instaladas, que el loader las encuentre
+ENV LD_LIBRARY_PATH=/opt/llama/lib:/opt/llama/lib64:${LD_LIBRARY_PATH}
 
 ENV LLAMA_RUN_BIN=/opt/llama/bin/llama-run
 ENV LLAMA_CLI_BIN=/opt/llama/bin/llama-cli
@@ -58,7 +68,7 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 COPY requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY app /app/app
 COPY worker.py /app/worker.py

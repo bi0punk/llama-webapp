@@ -23,6 +23,8 @@
                 <span class="badge text-bg-success">READY</span>
               {% elif m.status == "DOWNLOADING" %}
                 <span class="badge text-bg-warning">DOWNLOADING</span>
+              {% elif m.status == "NEEDS_TOKEN" %}
+                <span class="badge text-bg-warning">NEEDS_TOKEN</span>
               {% elif m.status == "ERROR" %}
                 <span class="badge text-bg-danger">ERROR</span>
               {% else %}
@@ -40,13 +42,17 @@
             <td>
               <div class="d-flex gap-2">
                 <form method="post" action="/models/{{ m.id }}/download">
-                  <button class="btn btn-sm btn-primary" {% if m.status == "DOWNLOADING" %}disabled{% endif %}>Descargar</button>
+                  {% set dl_blocked = (m.status == "DOWNLOADING") or (m.status == "NEEDS_TOKEN" and (not has_token)) %}
+                  <button class="btn btn-sm btn-primary" {% if dl_blocked %}disabled{% endif %}>Descargar</button>
                 </form>
                 <a class="btn btn-sm btn-outline-dark" href="/chat?model_id={{ m.id }}" {% if m.status != "READY" %}aria-disabled="true"{% endif %}>Chat</a>
                 <form method="post" action="/models/{{ m.id }}/delete" onsubmit="return confirm('¿Eliminar modelo y archivo local?');">
                   <button class="btn btn-sm btn-outline-danger">Eliminar</button>
                 </form>
               </div>
+              {% if m.status == "NEEDS_TOKEN" and (not has_token) %}
+                <div class="small text-danger mt-1">No puedes descargar: necesitas <span class="mono">HUGGING_FACE_TOKEN</span>.</div>
+              {% endif %}
             </td>
           </tr>
         {% endfor %}

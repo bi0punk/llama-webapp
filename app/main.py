@@ -172,7 +172,7 @@ def models_table_partial(request: Request):
         models = s.query(Model).order_by(Model.created_at.desc()).all()
         return templates.TemplateResponse(
             "partials/models_table.html",
-            {"request": request, "models": models},
+            {"request": request, "models": models, "has_token": bool(HUGGING_FACE_TOKEN)},
         )
 
 

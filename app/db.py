@@ -13,7 +13,19 @@ engine = create_engine(
     pool_pre_ping=True,
 )
 
-SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+# IMPORTANT:
+# We pass ORM objects to Jinja templates after the session context exits.
+# SQLAlchemy expires attributes on commit by default; later template access
+# would trigger a refresh and crash with DetachedInstanceError because the
+# instance is no longer bound to a session.
+#
+# Keeping attributes un-expired makes template rendering stable.
+SessionLocal = sessionmaker(
+    bind=engine,
+    autocommit=False,
+    autoflush=False,
+    expire_on_commit=False,
+)
 
 
 @contextmanager

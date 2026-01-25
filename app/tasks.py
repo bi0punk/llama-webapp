@@ -74,6 +74,20 @@ def download_model(job_id: int, model_id: int) -> None:
 
         try:
             with requests.get(model.url, headers=headers, stream=True, timeout=60) as r:
+                # Common Hugging Face failure modes: gated/private repos (401/403)
+                if r.status_code in (401, 403):
+                    model.status = "NEEDS_TOKEN"
+                    job.status = "error"
+                    job.message = "Requiere HUGGING_FACE_TOKEN (HTTP %s)" % r.status_code
+                    _log(job, f"ERROR: HTTP {r.status_code} (likely gated/private). Set HUGGING_FACE_TOKEN and retry.")
+                    return
+                if r.status_code == 429:
+                    model.status = "ERROR"
+                    job.status = "error"
+                    job.message = "Rate limit (HTTP 429). Reintenta más tarde."
+                    _log(job, "ERROR: HTTP 429 rate limited.")
+                    return
+
                 r.raise_for_status()
                 total = int(r.headers.get("Content-Length", "0") or "0")
 

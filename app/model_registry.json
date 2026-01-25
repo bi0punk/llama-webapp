@@ -2,7 +2,7 @@
   {
     "name": "TinyLlama-1.1B-Chat-v1.0.Q4_K_M.gguf",
     "source_type": "direct_url",
-    "url": "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf?download=true",
+    "url": "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF",
     "recommended": true,
     "requires_token": false,
     "notes": "Pequeño y rápido (CPU). Ideal para probar."
@@ -10,7 +10,7 @@
   {
     "name": "Phi-3-mini-4k-instruct-q4_k_m.gguf",
     "source_type": "direct_url",
-    "url": "https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/Phi-3-mini-4k-instruct-Q4_K_M.gguf?download=true",
+    "url": "https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-gguf",
     "recommended": true,
     "requires_token": false,
     "notes": "Buen equilibrio calidad/velocidad."
@@ -18,7 +18,7 @@
   {
     "name": "Mistral-7B-Instruct-v0.3-Q4_K_M.gguf",
     "source_type": "direct_url",
-    "url": "https://huggingface.co/bartowski/Mistral-7B-Instruct-v0.3-GGUF/resolve/main/Mistral-7B-Instruct-v0.3-Q4_K_M.gguf?download=true",
+    "url": "https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF",
     "recommended": true,
     "requires_token": false,
     "notes": "7B instruct (GGUF)."
@@ -26,7 +26,7 @@
   {
     "name": "Qwen2.5-7B-Instruct-Q4_K_M.gguf",
     "source_type": "direct_url",
-    "url": "https://huggingface.co/bartowski/Qwen2.5-7B-Instruct-GGUF/resolve/main/Qwen2.5-7B-Instruct-Q4_K_M.gguf?download=true",
+    "url": "https://huggingface.co/unsloth/Qwen2.5-VL-7B-Instruct-GGUF",
     "recommended": true,
     "requires_token": false,
     "notes": "Qwen 7B instruct (GGUF)."
@@ -34,7 +34,7 @@
   {
     "name": "gpt-oss-20b-Q4_K_M.gguf",
     "source_type": "direct_url",
-    "url": "https://huggingface.co/unsloth/gpt-oss-20b-GGUF/resolve/main/gpt-oss-20b-Q4_K_M.gguf?download=true",
+    "url": "https://huggingface.co/unsloth/gpt-oss-20b-GGUF",
     "recommended": true,
     "requires_token": false,
     "notes": "Grande (20B) — requiere buen CPU/RAM."
