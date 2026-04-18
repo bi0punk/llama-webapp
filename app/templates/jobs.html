@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <h3 class="mb-0">Jobs</h3>
+    <div class="small-muted">Descargas y tareas en segundo plano.</div>
+  </div>
+</div>
+<div id="jobs-table" hx-get="/partials/jobs_table" hx-trigger="load, every 3s" hx-swap="innerHTML"></div>
+{% endblock %}

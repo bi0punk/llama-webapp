@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-body">
+        <h4 class="card-title">Playground</h4>
+        <p class="small-muted">Prueba rápida vía backend proxy contra el llama-server ya levantado.</p>
+        <div class="alert {% if server_status.status == 'running' %}alert-success{% else %}alert-warning{% endif %}">
+          Estado actual: <strong>{{ server_status.status }}</strong>
+        </div>
+        <div class="mb-3 small-muted">Base LAN esperada: <span class="mono">{{ advertised_base_url }}</span></div>
+        <div class="mb-3">
+          <label class="form-label">Prompt</label>
+          <textarea id="prompt" class="form-control" rows="8">Dame un resumen técnico breve de qué hace este servidor local.</textarea>
+        </div>
+        <div class="row g-2 mb-3">
+          <div class="col-md-6">
+            <label class="form-label">Temperatura</label>
+            <input id="temperature" type="number" step="0.1" class="form-control" value="0.2">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Max tokens</label>
+            <input id="max_tokens" type="number" class="form-control" value="256">
+          </div>
+        </div>
+        <button id="send" class="btn btn-primary">Enviar</button>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Respuesta</h5>
+        <pre id="output" class="mono bg-light p-3 rounded border" style="min-height: 420px;"></pre>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/static/playground.js"></script>
+{% endblock %}

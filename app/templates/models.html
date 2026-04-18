@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <h3 class="mb-0">Modelos</h3>
+    <div class="small-muted">Registro de modelos remotos y locales. La carpeta configurada actual es <span class="mono">{{ settings.model_root_dir }}</span>.</div>
+  </div>
+  <div class="d-flex gap-2">
+    <form method="post" action="/models/import_registry">
+      <button class="btn btn-sm btn-outline-primary">Importar registry</button>
+    </form>
+    <form method="post" action="/models/scan_local">
+      <button class="btn btn-sm btn-outline-dark">Escanear modelos locales</button>
+    </form>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="card-title">Agregar modelo remoto</h5>
+        <form method="post" action="/models/add_and_download" class="row g-2">
+          <div class="col-12">
+            <label class="form-label">Nombre archivo</label>
+            <input class="form-control" name="name" placeholder="qwen2.5-coder-1.5b-instruct-q4_k_m.gguf" required>
+          </div>
+          <div class="col-12">
+            <label class="form-label">URL directa</label>
+            <input class="form-control mono" name="url" placeholder="https://huggingface.co/.../resolve/main/model.gguf?download=true" required>
+          </div>
+          <input type="hidden" name="source_type" value="direct_url" />
+          <div class="col-12">
+            <button class="btn btn-success">Agregar + Descargar</button>
+          </div>
+        </form>
+        <div class="mt-3 small-muted">
+          {% if has_token %}
+            <span class="badge text-bg-success">Token HF presente</span>
+          {% else %}
+            <span class="badge text-bg-warning">Sin token HF</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="card-title">Registry sugerido</h5>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead><tr><th>Nombre</th><th>Notas</th><th>Acción</th></tr></thead>
+            <tbody>
+            {% for e in registry %}
+              <tr>
+                <td class="mono">{{ e.name }}</td>
+                <td class="small-muted">{{ e.notes or "" }}</td>
+                <td>
+                  <form method="post" action="/models/add_and_download">
+                    <input type="hidden" name="name" value="{{ e.name }}">
+                    <input type="hidden" name="url" value="{{ e.url }}">
+                    <input type="hidden" name="source_type" value="{{ e.source_type or 'direct_url' }}">
+                    <button class="btn btn-sm btn-outline-primary">Descargar</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mt-4" id="models-table" hx-get="/partials/models_table" hx-trigger="load, every 4s" hx-swap="innerHTML"></div>
+{% endblock %}

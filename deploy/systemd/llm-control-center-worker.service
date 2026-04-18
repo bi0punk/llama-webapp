@@ -1,0 +1,19 @@
+[Unit]
+Description=Llama Control Center Worker
+After=network-online.target redis-server.service llm-control-center-web.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__SERVICE_USER__
+Group=__SERVICE_GROUP__
+WorkingDirectory=__PROJECT_DIR__
+EnvironmentFile=__PROJECT_DIR__/deploy/systemd/llm-control-center.env
+ExecStart=__PROJECT_DIR__/scripts/start_worker.sh
+Restart=always
+RestartSec=3
+KillMode=mixed
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target

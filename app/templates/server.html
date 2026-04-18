@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-body">
+        <h4 class="card-title">Estado de llama-server</h4>
+        <p class="small-muted">Inicio, detención y validación del proceso desde la UI. El bind recomendado para LAN es <span class="mono">0.0.0.0</span>.</p>
+        <div id="server-status-box">
+          {% if server_status.status == "running" %}
+            <div class="alert alert-success">Activo y respondiendo por HTTP.</div>
+          {% elif server_status.status == "starting" %}
+            <div class="alert alert-warning">Proceso arriba, pero aún no responde por HTTP.</div>
+          {% else %}
+            <div class="alert alert-secondary">Detenido.</div>
+          {% endif %}
+        </div>
+        <dl class="row mb-0" id="server-status-dl">
+          <dt class="col-sm-4">PID</dt><dd class="col-sm-8 mono">{{ server_status.pid or "-" }}</dd>
+          <dt class="col-sm-4">Alias</dt><dd class="col-sm-8 mono">{{ server_status.state.alias if server_status.state else settings.alias }}</dd>
+          <dt class="col-sm-4">Puerto</dt><dd class="col-sm-8 mono">{{ server_status.state.port if server_status.state else settings.server_port }}</dd>
+          <dt class="col-sm-4">Modelo</dt><dd class="col-sm-8 mono">{{ server_status.state.model_path if server_status.state else "-" }}</dd>
+          <dt class="col-sm-4">Binario</dt><dd class="col-sm-8 mono">{{ server_status.state.binary_path if server_status.state else settings.binary_path }}</dd>
+        </dl>
+        <div class="d-flex gap-2 mt-3">
+          <form method="post" action="/server/stop">
+            <button class="btn btn-outline-danger">Detener servidor</button>
+          </form>
+          <a href="/server/log" target="_blank" class="btn btn-outline-dark">Ver log</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card h-100">
+      <div class="card-body">
+        <h4 class="card-title">Configurar runtime</h4>
+        <p class="small-muted">Busca binarios de llama.cpp en el sistema visible para la app, deja una carpeta de modelos persistida y define la IP/puerto que usarán otras máquinas de tu red.</p>
+        <form method="post" action="/settings/save" class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Binario llama-server</label>
+            <input name="binary_path" class="form-control mono" value="{{ settings.binary_path }}" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Carpeta de modelos</label>
+            <input name="model_root_dir" class="form-control mono" value="{{ settings.model_root_dir }}" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Bind host</label>
+            <input name="server_host" class="form-control mono" value="{{ settings.server_host }}" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Bind port</label>
+            <input name="server_port" class="form-control mono" type="number" value="{{ settings.server_port }}" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Host LAN publicado</label>
+            <input name="public_host" class="form-control mono" value="{{ settings.public_host }}" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Puerto LAN publicado</label>
+            <input name="public_port" class="form-control mono" type="number" value="{{ settings.public_port }}" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Alias</label>
+            <input name="alias" class="form-control mono" value="{{ settings.alias }}" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Threads</label>
+            <input name="threads" class="form-control mono" type="number" value="{{ settings.threads }}" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Ctx size</label>
+            <input name="ctx_size" class="form-control mono" type="number" value="{{ settings.ctx_size }}" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">GPU layers</label>
+            <input name="n_gpu_layers" class="form-control mono" type="number" value="{{ settings.n_gpu_layers }}" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">API key opcional</label>
+            <input name="api_key" class="form-control mono" value="{{ settings.api_key }}">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Extra args opcionales</label>
+            <input name="extra_args" class="form-control mono" value="{{ settings.extra_args }}" placeholder="Ej: --parallel 2 --batch-size 512 --ubatch-size 512">
+          </div>
+          <div class="col-12">
+            <button class="btn btn-primary">Guardar configuración</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mt-1">
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="card-title mb-0">Acceso local y en LAN</h5>
+        <div class="small-muted mb-3">Desde la misma máquina usa loopback. Desde otra máquina en la misma red usa la IP LAN publicada.</div>
+        <div class="mb-3">
+          <div class="fw-semibold small text-uppercase">Loopback</div>
+          <pre class="mono bg-light p-3 rounded border mb-0">{{ loopback_base_url }}</pre>
+        </div>
+        <div class="mb-3">
+          <div class="fw-semibold small text-uppercase">LAN</div>
+          <pre class="mono bg-light p-3 rounded border mb-0">{{ advertised_base_url }}</pre>
+        </div>
+        <div class="small-muted">IPs detectadas en esta instancia: {% for ip in system_info.local_ip_candidates %}<span class="mono">{{ ip }}</span>{% if not loop.last %}, {% endif %}{% endfor %}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <h5 class="card-title mb-0">Descubrimiento de binarios</h5>
+            <div class="small-muted">Rutas encontradas desde PATH y carpetas comunes. En Docker verá lo que exista dentro del contenedor; en modo nativo verá el host Linux real.</div>
+          </div>
+          <a class="btn btn-sm btn-outline-dark" href="/api/system/discovery" target="_blank">JSON</a>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead><tr><th>Binario</th><th>Existe</th><th>Versión</th></tr></thead>
+            <tbody>
+              {% for item in binaries %}
+              <tr>
+                <td class="mono">{{ item.path }}</td>
+                <td>
+                  {% if item.exists %}<span class="badge text-bg-success">sí</span>{% else %}<span class="badge text-bg-secondary">no</span>{% endif %}
+                </td>
+                <td class="mono">{{ item.version }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mt-1">
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="card-title">Levantar modelo</h5>
+        <p class="small-muted">Selecciona el GGUF, revisa la sugerencia y arráncalo. La casilla de recomendación ajusta threads, ctx y args antes del arranque.</p>
+        <form method="post" action="/server/start" class="row g-3" id="start-form">
+          <div class="col-12">
+            <label class="form-label">Modelo</label>
+            <select class="form-select mono" name="model_id" id="model-select" required>
+              {% for m in models %}
+                {% if m.local_path %}
+                  <option value="{{ m.id }}" {% if settings.last_model_id == m.id %}selected{% endif %}>#{{ m.id }} | {{ m.name }} | {{ m.local_path }}</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-12">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="apply_recommendation" value="1" id="apply_recommendation" checked>
+              <label class="form-check-label" for="apply_recommendation">Aplicar recomendación del modelo antes de iniciar</label>
+            </div>
+          </div>
+          <div class="col-12">
+            <button class="btn btn-success">Iniciar llama-server</button>
+          </div>
+        </form>
+        <hr>
+        <div id="model-profile-box" class="small-muted">
+          {% if settings.last_model_id and profiles.get(settings.last_model_id) %}
+            {% set p = profiles[settings.last_model_id] %}
+            <div class="fw-semibold text-dark mb-2">Sugerencia para el modelo seleccionado</div>
+            <ul class="mb-2">
+              <li><span class="mono">threads={{ p.threads }}</span></li>
+              <li><span class="mono">ctx_size={{ p.ctx_size }}</span></li>
+              <li><span class="mono">n_gpu_layers={{ p.n_gpu_layers }}</span></li>
+              <li><span class="mono">extra_args={{ p.extra_args }}</span></li>
+            </ul>
+            <div>
+              {% for note in p.notes %}
+                <div>• {{ note }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+        <form method="post" action="/settings/apply_model_profile" class="mt-3">
+          <input type="hidden" name="model_id" id="profile-model-id" value="{{ settings.last_model_id or '' }}">
+          <button class="btn btn-outline-primary">Aplicar sugerencia al runtime</button>
+        </form>
+        <hr>
+        <h6>Carpetas que se escanean para GGUF</h6>
+        <ul class="small-muted">
+          {% for root in scan_roots %}
+            <li class="mono">{{ root }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="card-title">Tail del log de servidor</h5>
+        <div class="small-muted mb-2">Se refresca automáticamente cada 3 segundos.</div>
+        <pre id="server-log-tail" class="mono bg-light p-3 rounded border" style="min-height: 420px; max-height: 540px; overflow:auto;">{{ log_tail }}</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mt-1">
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="card-title">Pruebas con curl en localhost</h5>
+        <p class="small-muted">Para validar desde la máquina que está ejecutando llama-server.</p>
+        {% for name, cmd in curl_examples.localhost.items() %}
+          <div class="mb-3">
+            <div class="fw-semibold text-uppercase small">{{ name }}</div>
+            <pre class="mono bg-light p-3 rounded border">{{ cmd }}</pre>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="card-title">Pruebas con curl desde otra máquina de la red</h5>
+        <p class="small-muted">Usa estas pruebas desde otro equipo de la misma LAN, ajustando firewall si corresponde.</p>
+        {% for name, cmd in curl_examples.lan.items() %}
+          <div class="mb-3">
+            <div class="fw-semibold text-uppercase small">{{ name }}</div>
+            <pre class="mono bg-light p-3 rounded border">{{ cmd }}</pre>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+window.SERVER_PROFILES = {{ profiles | tojson }};
+</script>
+<script src="/static/server.js"></script>
+{% endblock %}

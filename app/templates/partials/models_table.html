@@ -1,0 +1,78 @@
+<div class="card">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-sm align-middle">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Fuente</th>
+            <th>Estado</th>
+            <th>Tamaño</th>
+            <th>Path</th>
+            <th>Perfil sugerido</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for m in models %}
+          <tr>
+            <td class="mono">{{ m.id }}</td>
+            <td class="mono">{{ m.name }}</td>
+            <td class="mono">{{ m.source_type }}</td>
+            <td>
+              {% if m.status == "READY" %}
+                <span class="badge text-bg-success">READY</span>
+              {% elif m.status == "DOWNLOADING" %}
+                <span class="badge text-bg-warning">DOWNLOADING</span>
+              {% elif m.status == "NEEDS_TOKEN" %}
+                <span class="badge text-bg-warning">NEEDS_TOKEN</span>
+              {% elif m.status == "ERROR" %}
+                <span class="badge text-bg-danger">ERROR</span>
+              {% else %}
+                <span class="badge text-bg-secondary">{{ m.status }}</span>
+              {% endif %}
+            </td>
+            <td class="mono">{% if m.size_bytes %}{{ (m.size_bytes / (1024*1024*1024))|round(2) }} GB{% else %}-{% endif %}</td>
+            <td class="mono" style="max-width: 420px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ m.local_path or m.url or '-' }}</td>
+            <td class="small-muted" style="min-width:240px;">
+              {% if profiles.get(m.id) %}
+                {% set p = profiles[m.id] %}
+                <div class="mono">thr={{ p.threads }} | ctx={{ p.ctx_size }}</div>
+                <div class="mono">ngl={{ p.n_gpu_layers }}</div>
+                <div class="mono" style="white-space:normal;">{{ p.extra_args }}</div>
+                {% if p.estimated_ram_gb %}<div>RAM ~{{ p.estimated_ram_gb }} GB</div>{% endif %}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>
+              <div class="d-flex gap-2 flex-wrap">
+                {% if m.url %}
+                <form method="post" action="/models/{{ m.id }}/download">
+                  <button class="btn btn-sm btn-primary" {% if m.status == 'DOWNLOADING' %}disabled{% endif %}>Descargar</button>
+                </form>
+                {% endif %}
+                {% if m.local_path %}
+                <form method="post" action="/server/start">
+                  <input type="hidden" name="model_id" value="{{ m.id }}">
+                  <input type="hidden" name="apply_recommendation" value="1">
+                  <button class="btn btn-sm btn-success">Levantar</button>
+                </form>
+                <form method="post" action="/settings/apply_model_profile">
+                  <input type="hidden" name="model_id" value="{{ m.id }}">
+                  <button class="btn btn-sm btn-outline-primary">Aplicar perfil</button>
+                </form>
+                {% endif %}
+                <form method="post" action="/models/{{ m.id }}/delete" onsubmit="return confirm('¿Eliminar modelo del registro y archivo local si existe?');">
+                  <button class="btn btn-sm btn-outline-danger">Eliminar</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

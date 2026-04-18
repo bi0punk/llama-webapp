@@ -1,0 +1,15 @@
+{
+  "model_root_dir": "/tmp/work_llm/testdata/models",
+  "binary_path": "/opt/llama/bin/llama-server",
+  "server_host": "0.0.0.0",
+  "server_port": 8081,
+  "alias": "llama-local",
+  "ctx_size": 4096,
+  "threads": 4,
+  "n_gpu_layers": 0,
+  "api_key": "",
+  "extra_args": "",
+  "public_host": "",
+  "public_port": 8081,
+  "last_model_id": null
+}
