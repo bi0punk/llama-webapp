@@ -37,6 +37,7 @@ class RuntimeSettings(BaseModel):
     public_host: str = DEFAULT_PUBLIC_HOST
     public_port: int = DEFAULT_PUBLIC_PORT
     last_model_id: int | None = None
+    backend_type: str = "llama_server"  # "llama_server" | "llama_unified"
 
     model_config = ConfigDict(extra="ignore")
 

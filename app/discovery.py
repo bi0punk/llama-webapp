@@ -15,7 +15,24 @@ from app.config import (
 )
 from app.runtime_settings import load_runtime_settings
 
-EXECUTABLE_NAMES = ("llama-server", "llama-run", "llama-cli")
+EXECUTABLE_NAMES = ("llama-server", "llama-run", "llama-cli", "llama")
+
+
+def find_llama_unified() -> dict[str, str | bool] | None:
+    path = shutil.which("llama")
+    if not path:
+        return None
+    if Path(path).resolve().name in ("llama-server", "llama-run", "llama-cli"):
+        return None
+    try:
+        result = subprocess.run(
+            [path, "--version"],
+            capture_output=True, text=True, timeout=5, check=False,
+        )
+        version = (result.stdout or "").strip().splitlines()[0][:240] if result.stdout else "desconocida"
+    except Exception:
+        version = "desconocida"
+    return {"path": path, "exists": True, "name": "llama", "version": version}
 
 
 def _unique(seq: Iterable[str]) -> list[str]:
