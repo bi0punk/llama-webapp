@@ -13,7 +13,7 @@ from app.deps import (
     load_registry,
     load_runtime_settings,
 )
-from app.llama_server_manager import start_backend, stop_llama_server
+from app.llama_server_manager import start_llama_server, stop_llama_server
 from app.model_profiles import describe_model
 from app.models import Model
 from app.runtime_settings import save_runtime_settings
@@ -139,51 +139,42 @@ def delete_model(model_id: int):
 
 @router.post("/server/start")
 def server_start(
-    model_id: int = Form(0),
+    model_id: int = Form(...),
     apply_recommendation: str | None = Form(None),
-    backend_type: str = Form("llama_server"),
-    llama_model_name: str = Form(""),
 ) -> RedirectResponse:
     settings = load_runtime_settings()
-    settings.backend_type = backend_type
-    save_runtime_settings(settings)
+    with session_scope() as s:
+        model = s.get(Model, model_id)
+        if not model:
+            raise HTTPException(status_code=404, detail="Modelo no encontrado")
+        if not model.local_path or not Path(model.local_path).exists():
+            raise HTTPException(status_code=400, detail="El modelo no existe en disco. Importa o descarga primero.")
+        model_local_path = model.local_path
+        model_size = model.size_bytes
+        model_name = model.name
 
-    if backend_type == "llama_unified":
-        if not llama_model_name:
-            raise HTTPException(status_code=400, detail="Selecciona un modelo GGUF para el binario unificado.")
-        model_local_path = llama_model_name
-    else:
-        with session_scope() as s:
-            model = s.get(Model, model_id)
-            if not model:
-                raise HTTPException(status_code=404, detail="Modelo no encontrado")
-            if not model.local_path or not Path(model.local_path).exists():
-                raise HTTPException(status_code=400, detail="El modelo no existe en disco. Importa o descarga primero.")
-            model_local_path = model.local_path
-            model_name = model.name
+    binary_path = Path(settings.binary_path).expanduser()
+    if not binary_path.exists():
+        raise HTTPException(status_code=400, detail=f"Binario no encontrado: {binary_path}")
 
-        binary_abs = Path(settings.binary_path).expanduser()
-        if not binary_abs.exists():
-            raise HTTPException(status_code=400, detail=f"Binario no encontrado: {binary_abs}")
-
-        if apply_recommendation:
-            profile = describe_model(model_local_path or model_name, None)
-            settings.ctx_size = int(profile["ctx_size"])
-            settings.threads = int(profile["threads"])
-            settings.n_gpu_layers = int(profile["n_gpu_layers"])
-            settings.extra_args = profile["extra_args"]
-            save_runtime_settings(settings)
+    effective_settings = settings
+    if apply_recommendation:
+        profile = describe_model(model_local_path or model_name, model_size)
+        effective_settings.ctx_size = int(profile["ctx_size"])
+        effective_settings.threads = int(profile["threads"])
+        effective_settings.n_gpu_layers = int(profile["n_gpu_layers"])
+        effective_settings.extra_args = profile["extra_args"]
+        save_runtime_settings(effective_settings)
 
     try:
-        state = start_backend(settings.binary_path, model_local_path, settings, model_id=model_id if model_id else None)
+        state = start_llama_server(str(binary_path), model_local_path, effective_settings, model_id=model_id)
     except RuntimeError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-    if model_id:
-        settings.last_model_id = model_id
+    settings.last_model_id = model_id
     save_runtime_settings(settings)
     if not state:
-        raise HTTPException(status_code=500, detail="No se pudo iniciar el servidor")
+        raise HTTPException(status_code=500, detail="No se pudo iniciar llama-server")
     return RedirectResponse(url="/server", status_code=303)
 
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI
@@ -11,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from app.config import DATA_DIR, LOGS_DIR, WEB_TITLE
 from app.db import engine
 from app.deps import BASE_DIR
+from app.discovery import find_llama_server
 from app.llama_server_manager import cleanup_stale_process
 from app.models import Base
 from app.routes import actions, api, web
@@ -35,7 +37,12 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     settings = load_runtime_settings()
     if not settings.public_host:
         settings.public_host = default_public_host()
-        save_runtime_settings(settings)
+
+    llama_server = find_llama_server()
+    if llama_server and (not settings.binary_path or not Path(settings.binary_path).expanduser().exists()):
+        settings.binary_path = str(llama_server["path"])
+
+    save_runtime_settings(settings)
     yield
 
 

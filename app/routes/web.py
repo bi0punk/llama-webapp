@@ -15,7 +15,7 @@ from app.deps import (
     precompute_profiles,
     templates,
 )
-from app.discovery import find_llama_binaries, find_llama_unified, model_scan_roots
+from app.discovery import find_llama_binaries, model_scan_roots
 from app.llama_server_manager import get_server_status, server_log_tail
 from app.system_info import system_snapshot
 
@@ -32,7 +32,6 @@ def server_page(request: Request):
     settings = load_runtime_settings()
     server_status = get_server_status()
     binaries = find_llama_binaries()
-    llama_unified_info = find_llama_unified()
     models, _ = get_models_page(page=1, page_size=500)
     profiles = precompute_profiles(models)
     curl_examples = build_curl_examples()
@@ -43,7 +42,6 @@ def server_page(request: Request):
             "settings": settings,
             "server_status": server_status,
             "binaries": binaries,
-            "llama_unified_info": llama_unified_info,
             "models": models,
             "profiles": profiles,
             "curl_examples": curl_examples,

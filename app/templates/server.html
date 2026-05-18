@@ -151,43 +151,14 @@
     <div class="card h-100">
       <div class="card-body">
         <h5 class="card-title">Levantar modelo</h5>
-        <p class="small-muted">Selecciona backend y modelo, revisa la sugerencia y arráncalo.</p>
-
-        {% if llama_unified_info %}
-        <div class="alert alert-info small py-2 mb-3">
-          <strong>llama (unified)</strong> detectado en <span class="mono">{{ llama_unified_info.path }}</span> v{{ llama_unified_info.version }}
-          · Usa <span class="mono">llama server -m modelo.gguf</span>
-        </div>
-        {% endif %}
-
+        <p class="small-muted">Selecciona el GGUF, revisa la sugerencia y arráncalo. La casilla de recomendación ajusta threads, ctx y args antes del arranque.</p>
         <form method="post" action="/server/start" class="row g-3" id="start-form">
           <div class="col-12">
-            <label class="form-label">Backend</label>
-            <select class="form-select mono" name="backend_type" id="backend-select">
-              <option value="llama_server" {% if settings.backend_type == 'llama_server' %}selected{% endif %}>llama-server (dedicado)</option>
-              {% if llama_unified_info %}
-              <option value="llama_unified" {% if settings.backend_type == 'llama_unified' %}selected{% endif %}>llama (unificado: llama server ...)</option>
-              {% endif %}
-            </select>
-          </div>
-          <div class="col-12" id="llama-model-group">
-            <label class="form-label">Modelo GGUF</label>
-            <select class="form-select mono" name="model_id" id="model-select">
-              <option value="">-- Seleccionar --</option>
+            <label class="form-label">Modelo</label>
+            <select class="form-select mono" name="model_id" id="model-select" required>
               {% for m in models %}
                 {% if m.local_path %}
-                  <option value="{{ m.id }}" {% if settings.last_model_id == m.id %}selected{% endif %}>#{{ m.id }} | {{ m.name }}</option>
-                {% endif %}
-              {% endfor %}
-            </select>
-          </div>
-          <div class="col-12" id="unified-model-group" style="display:none;">
-            <label class="form-label">Modelo GGUF (para llama server ...)</label>
-            <select class="form-select mono" name="llama_model_name" id="unified-model-select">
-              <option value="">-- Seleccionar --</option>
-              {% for m in models %}
-                {% if m.local_path %}
-                  <option value="{{ m.local_path }}" {% if settings.last_model_id == m.id %}selected{% endif %}>{{ m.name }}</option>
+                  <option value="{{ m.id }}" {% if settings.last_model_id == m.id %}selected{% endif %}>#{{ m.id }} | {{ m.name }} | {{ m.local_path }}</option>
                 {% endif %}
               {% endfor %}
             </select>
@@ -199,7 +170,7 @@
             </div>
           </div>
           <div class="col-12">
-            <button class="btn btn-success" id="start-btn">Iniciar servidor</button>
+            <button class="btn btn-success">Iniciar llama-server</button>
           </div>
         </form>
         <hr>

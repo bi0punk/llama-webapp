@@ -171,63 +171,20 @@ def build_server_command(
     return cmd
 
 
-def build_llama_unified_command(
+def start_llama_server(
     binary_path: str,
     model_path: str,
-    settings: RuntimeSettings,
-) -> list[str]:
-    cmd = [
-        binary_path,
-        "server",
-        "-m",
-        model_path,
-        "--host",
-        settings.server_host,
-        "--port",
-        str(settings.server_port),
-        "--alias",
-        settings.alias,
-        "--ctx-size",
-        str(settings.ctx_size),
-        "--threads",
-        str(settings.threads),
-    ]
-
-    if settings.n_gpu_layers and int(settings.n_gpu_layers) > 0:
-        cmd.extend(["-ngl", str(settings.n_gpu_layers)])
-    if settings.api_key:
-        cmd.extend(["--api-key", settings.api_key])
-    if settings.extra_args:
-        cmd.extend(shlex.split(settings.extra_args))
-    return cmd
-
-
-def start_backend(
-    binary_path: str,
-    model_path_or_name: str,
     settings: RuntimeSettings,
     model_id: int | None = None,
 ) -> dict[str, Any]:
     current = get_server_status()
     if current["status"] in {"running", "starting"}:
-        raise RuntimeError("Ya hay un servidor activo. Deténlo antes de iniciar otro.")
+        raise RuntimeError("Ya existe un llama-server activo o iniciando. Deténlo antes de iniciar otro.")
 
     log_path = _log_path()
     os.makedirs(log_path.parent, exist_ok=True)
-
-    if settings.backend_type == "llama_unified":
-        return _start_llama_unified(log_path, binary_path, model_path_or_name, settings, model_id)
-    return _start_llama_server_legacy(log_path, binary_path, model_path_or_name, settings, model_id)
-
-
-def _start_llama_server_legacy(
-    log_path: Path,
-    binary_path: str,
-    model_path: str,
-    settings: RuntimeSettings,
-    model_id: int | None = None,
-) -> dict[str, Any]:
     cmd = build_server_command(binary_path, model_path, settings)
+
     with open(log_path, "a", encoding="utf-8") as handle:
         handle.write(f"\n=== {datetime.utcnow().isoformat()}Z starting llama-server ===\n")
         handle.write("CMD: " + " ".join(cmd) + "\n")
@@ -237,7 +194,8 @@ def _start_llama_server_legacy(
     for _ in range(10):
         if process.poll() is not None:
             raise RuntimeError(
-                "llama-server terminó inmediatamente.\n\n" + server_log_tail(lines=80)
+                "llama-server terminó inmediatamente. Revisa el log para ver el error real.\n\n"
+                + server_log_tail(lines=80)
             )
         if process.pid is not None and is_pid_running(process.pid):
             break
@@ -247,54 +205,6 @@ def _start_llama_server_legacy(
 
     state = {
         "pid": process.pid,
-        "backend_type": "llama_server",
-        "binary_path": binary_path,
-        "model_path": model_path,
-        "model_id": model_id,
-        "host": settings.server_host,
-        "port": settings.server_port,
-        "alias": settings.alias,
-        "api_key": settings.api_key,
-        "ctx_size": settings.ctx_size,
-        "threads": settings.threads,
-        "n_gpu_layers": settings.n_gpu_layers,
-        "extra_args": settings.extra_args,
-        "started_at": datetime.utcnow().isoformat() + "Z",
-        "cmd": cmd,
-        "log_path": str(log_path),
-    }
-    save_server_state(state)
-    return state
-
-
-def _start_llama_unified(
-    log_path: Path,
-    binary_path: str,
-    model_path: str,
-    settings: RuntimeSettings,
-    model_id: int | None = None,
-) -> dict[str, Any]:
-    cmd = build_llama_unified_command(binary_path, model_path, settings)
-    with open(log_path, "a", encoding="utf-8") as handle:
-        handle.write(f"\n=== {datetime.utcnow().isoformat()}Z starting llama unified ===\n")
-        handle.write("CMD: " + " ".join(cmd) + "\n")
-        handle.flush()
-        process = subprocess.Popen(cmd, stdout=handle, stderr=subprocess.STDOUT, start_new_session=True)
-
-    for _ in range(10):
-        if process.poll() is not None:
-            raise RuntimeError(
-                "llama (unified) terminó inmediatamente.\n\n" + server_log_tail(lines=80)
-            )
-        if process.pid is not None and is_pid_running(process.pid):
-            break
-        time.sleep(0.2)
-    else:
-        raise RuntimeError("llama (unified) no arrancó después de 2s.")
-
-    state = {
-        "pid": process.pid,
-        "backend_type": "llama_unified",
         "binary_path": binary_path,
         "model_path": model_path,
         "model_id": model_id,
@@ -319,16 +229,16 @@ def stop_llama_server() -> dict[str, Any]:
     pid = state.get("pid")
     if not pid or not is_pid_running(pid):
         clear_server_state()
-        return {"stopped": False, "message": "No había un servidor activo."}
+        return {"stopped": False, "message": "No había un llama-server activo."}
 
     kill_process_group(pid, signal.SIGTERM)
 
     for _ in range(40):
         if not is_pid_running(pid):
             clear_server_state()
-            return {"stopped": True, "message": "Servidor detenido correctamente."}
+            return {"stopped": True, "message": "llama-server detenido correctamente."}
         time.sleep(0.25)
 
     kill_process_group(pid, signal.SIGKILL)
     clear_server_state()
-    return {"stopped": True, "message": "Servidor detenido con SIGKILL (timeout 10s)."}
+    return {"stopped": True, "message": "llama-server detenido con SIGKILL (timeout 10s)."}

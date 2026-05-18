@@ -3,29 +3,11 @@
   const modelSelect = document.getElementById('model-select');
   const profileBox = document.getElementById('model-profile-box');
   const profileModelId = document.getElementById('profile-model-id');
-  const backendSelect = document.getElementById('backend-select');
-  const llamaGroup = document.getElementById('llama-model-group');
-  const unifiedGroup = document.getElementById('unified-model-group');
-  const unifiedSelect = document.getElementById('unified-model-select');
-  const startBtn = document.getElementById('start-btn');
   const profiles = window.SERVER_PROFILES || {};
 
-  function toggleBackend() {
-    const backend = backendSelect ? backendSelect.value : 'llama_server';
-    if (llamaGroup) llamaGroup.style.display = backend === 'llama_server' ? '' : 'none';
-    if (unifiedGroup) unifiedGroup.style.display = backend === 'llama_unified' ? '' : 'none';
-    if (startBtn) startBtn.textContent = backend === 'llama_unified' ? 'Iniciar llama (unified)' : 'Iniciar llama-server';
-    renderProfile();
-  }
-
   function renderProfile() {
-    if (!profileBox) return;
-    const backend = backendSelect ? backendSelect.value : 'llama_server';
-    if (backend === 'llama_unified') {
-      profileBox.innerHTML = '<div class="small-muted">Usando binario unificado llama. Selecciona el modelo GGUF abajo.</div>';
-      return;
-    }
-    const id = modelSelect ? modelSelect.value : '';
+    if (!modelSelect || !profileBox) return;
+    const id = modelSelect.value;
     if (profileModelId) profileModelId.value = id;
     const p = profiles[id];
     if (!p) {
@@ -59,13 +41,9 @@
 
   if (modelSelect) {
     modelSelect.addEventListener('change', renderProfile);
-  }
-  if (backendSelect) {
-    backendSelect.addEventListener('change', toggleBackend);
+    renderProfile();
   }
 
-  toggleBackend();
-  renderProfile();
   refreshLog();
   setInterval(refreshLog, 3000);
 })();
