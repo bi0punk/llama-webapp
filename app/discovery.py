@@ -3,8 +3,8 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 from app.config import (
     DEFAULT_BINARY_CANDIDATES,
@@ -14,7 +14,6 @@ from app.config import (
     EXTRA_MODEL_SCAN_PATHS,
 )
 from app.runtime_settings import load_runtime_settings
-
 
 EXECUTABLE_NAMES = ("llama-server", "llama-run", "llama-cli")
 

@@ -1,25 +1,32 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 from contextlib import contextmanager
+from typing import Any
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.config import DATABASE_URL
+from app.config import (
+    DATABASE_URL,
+    SQLITE_MAX_OVERFLOW,
+    SQLITE_POOL_SIZE,
+    SQLITE_POOL_TIMEOUT,
+)
+
+connect_args: dict[str, Any] = {}
+if DATABASE_URL.startswith("sqlite"):
+    connect_args["check_same_thread"] = False
+    connect_args["timeout"] = SQLITE_POOL_TIMEOUT
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {},
+    connect_args=connect_args,
     pool_pre_ping=True,
+    pool_size=SQLITE_POOL_SIZE,
+    max_overflow=SQLITE_MAX_OVERFLOW,
 )
 
-# IMPORTANT:
-# We pass ORM objects to Jinja templates after the session context exits.
-# SQLAlchemy expires attributes on commit by default; later template access
-# would trigger a refresh and crash with DetachedInstanceError because the
-# instance is no longer bound to a session.
-#
-# Keeping attributes un-expired makes template rendering stable.
 SessionLocal = sessionmaker(
     bind=engine,
     autocommit=False,
@@ -29,8 +36,8 @@ SessionLocal = sessionmaker(
 
 
 @contextmanager
-def session_scope() -> Session:
-    session: Session = SessionLocal()
+def session_scope() -> Iterator[Session]:
+    session = SessionLocal()
     try:
         yield session
         session.commit()

@@ -1,0 +1,53 @@
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      target: web
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      DATA_DIR: /data
+      WEB_HOST: "0.0.0.0"
+      WEB_PORT: "8000"
+    volumes:
+      - data_vol:/data
+      - models_vol:/models
+      - ${LLAMA_BIN_DIR:-/usr/local/bin}:/opt/llama/bin:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      target: worker
+    restart: unless-stopped
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      DATA_DIR: /data
+    volumes:
+      - data_vol:/data
+      - models_vol:/models
+    depends_on:
+      redis:
+        condition: service_healthy
+
+volumes:
+  redis_data:
+  data_vol:
+  models_vol:

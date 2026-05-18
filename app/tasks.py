@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import os
 import re
+import struct
 import time
+from contextlib import suppress
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -13,8 +15,41 @@ from app.db import session_scope
 from app.models import Job, Model
 from app.runtime_settings import load_runtime_settings
 
-
 FILENAME_RE = re.compile(r"[^a-zA-Z0-9._-]+")
+
+
+GGUF_MAGIC = b"GGUF"
+GGUF_VERSION_OFFSET = 4
+GGUF_TENSOR_COUNT_OFFSET = 8
+GGUF_METADATA_KV_COUNT_OFFSET = 16
+GGUF_HEADER_MIN_SIZE = 24
+
+
+def validate_gguf_header(path: Path) -> tuple[bool, str]:
+    try:
+        with open(path, "rb") as f:
+            header = f.read(256)
+    except OSError as exc:
+        return False, f"No se pudo leer: {exc}"
+
+    if len(header) < GGUF_HEADER_MIN_SIZE:
+        return False, "Archivo demasiado pequeño para ser GGUF"
+
+    magic = header[:4]
+    if magic != GGUF_MAGIC:
+        return False, f"Magic number inválido: {magic!r} (esperado: {GGUF_MAGIC!r})"
+
+    version = struct.unpack("<I", header[GGUF_VERSION_OFFSET:GGUF_VERSION_OFFSET + 4])[0]
+    tensor_count = struct.unpack("<Q", header[GGUF_TENSOR_COUNT_OFFSET:GGUF_TENSOR_COUNT_OFFSET + 8])[0]
+    kv_count = struct.unpack("<Q", header[GGUF_METADATA_KV_COUNT_OFFSET:GGUF_METADATA_KV_COUNT_OFFSET + 8])[0]
+
+    if version < 1 or version > 3:
+        return False, f"Versión GGUF no soportada: v{version}"
+
+    if tensor_count > 1_000_000 or kv_count > 100_000:
+        return False, f"Header sospechoso: tensors={tensor_count}, kv={kv_count}"
+
+    return True, f"GGUF v{version}, {tensor_count} tensores, {kv_count} metadatos"
 
 
 def _safe_filename(value: str) -> str:
@@ -30,6 +65,10 @@ def _log(job: Job, message: str) -> None:
         return
     path = Path(job.log_path)
     os.makedirs(path.parent, exist_ok=True)
+    max_bytes = 10 * 1024 * 1024
+    if path.exists() and path.stat().st_size > max_bytes:
+        rotated = path.with_suffix(path.suffix + ".1")
+        path.rename(rotated)
     with open(path, "a", encoding="utf-8") as handle:
         handle.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {message}\n")
 
@@ -50,7 +89,6 @@ def _guess_filename_from_url(url: str) -> str:
 
 
 def download_model(job_id: int, model_id: int) -> None:
-    """Download a GGUF file from a direct URL with basic validation."""
     os.makedirs(LOGS_DIR, exist_ok=True)
 
     with session_scope() as s:
@@ -151,19 +189,14 @@ def download_model(job_id: int, model_id: int) -> None:
                                 job.message = f"{downloaded / 1024 / 1024:.1f} MB"
                                 last_update = now
 
-            with open(tmp_path, "rb") as handle:
-                magic = handle.read(4)
-                head = handle.read(64)
-
-            if magic != b"GGUF":
-                try:
+            valid, msg = validate_gguf_header(tmp_path)
+            if not valid:
+                with suppress(OSError):
                     os.remove(tmp_path)
-                except OSError:
-                    pass
                 model.status = "ERROR"
                 job.status = "error"
-                job.message = f"Archivo descargado no es GGUF (magic={magic!r})"
-                _log(job, f"ERROR: not GGUF. magic={magic!r} head={head[:20]!r}")
+                job.message = f"Archivo descargado no es GGUF válido: {msg}"
+                _log(job, f"ERROR: invalid GGUF: {msg}")
                 return
 
             os.replace(tmp_path, local_path)
@@ -175,7 +208,7 @@ def download_model(job_id: int, model_id: int) -> None:
             job.progress = 100
             job.status = "done"
             job.message = "Download complete"
-            _log(job, "Download complete")
+            _log(job, f"Download complete ({msg})")
         except Exception as exc:
             try:
                 if tmp_path.exists():

@@ -6,6 +6,7 @@ import shlex
 import signal
 import subprocess
 import time
+from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -52,6 +53,27 @@ def is_pid_running(pid: int | None) -> bool:
         return False
 
 
+def kill_process_group(pid: int, sig: int = signal.SIGTERM) -> None:
+    with suppress(ProcessLookupError):
+        os.killpg(pid, sig)
+    with suppress(ProcessLookupError):
+        os.kill(pid, sig)
+
+
+def cleanup_stale_process() -> None:
+    state = load_server_state()
+    pid = state.get("pid")
+    if pid and is_pid_running(pid):
+        kill_process_group(pid, signal.SIGTERM)
+        for _ in range(10):
+            if not is_pid_running(pid):
+                break
+            time.sleep(0.2)
+        else:
+            kill_process_group(pid, signal.SIGKILL)
+    clear_server_state()
+
+
 def _log_path() -> Path:
     os.makedirs(LOGS_DIR, exist_ok=True)
     return Path(LOGS_DIR) / "llama_server.log"
@@ -71,17 +93,21 @@ def server_http_status(state: dict[str, Any]) -> dict[str, Any]:
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
     base_url = f"http://127.0.0.1:{port}"
 
-    for endpoint in ("/health", "/v1/models"):
-        try:
-            response = requests.get(f"{base_url}{endpoint}", headers=headers, timeout=1.5)
-            return {
-                "reachable": True,
-                "http_status": response.status_code,
-                "endpoint": endpoint,
-                "ok": response.ok,
-            }
-        except Exception:
-            continue
+    endpoints = ["/health", "/v1/models"]
+    for attempt in range(3):
+        for endpoint in endpoints:
+            try:
+                response = requests.get(f"{base_url}{endpoint}", headers=headers, timeout=2.0)
+                return {
+                    "reachable": True,
+                    "http_status": response.status_code,
+                    "endpoint": endpoint,
+                    "ok": response.ok,
+                }
+            except Exception:
+                continue
+        if attempt < 2:
+            time.sleep(0.5)
 
     return {
         "reachable": False,
@@ -145,7 +171,12 @@ def build_server_command(
     return cmd
 
 
-def start_llama_server(binary_path: str, model_path: str, settings: RuntimeSettings, model_id: int | None = None) -> dict[str, Any]:
+def start_llama_server(
+    binary_path: str,
+    model_path: str,
+    settings: RuntimeSettings,
+    model_id: int | None = None,
+) -> dict[str, Any]:
     current = get_server_status()
     if current["status"] in {"running", "starting"}:
         raise RuntimeError("Ya existe un llama-server activo o iniciando. Deténlo antes de iniciar otro.")
@@ -165,12 +196,17 @@ def start_llama_server(binary_path: str, model_path: str, settings: RuntimeSetti
             start_new_session=True,
         )
 
-    time.sleep(0.7)
-    if process.poll() is not None:
-        raise RuntimeError(
-            "llama-server terminó inmediatamente. Revisa el log para ver el error real.\n\n"
-            + server_log_tail(lines=80)
-        )
+    for _ in range(10):
+        if process.poll() is not None:
+            raise RuntimeError(
+                "llama-server terminó inmediatamente. Revisa el log para ver el error real.\n\n"
+                + server_log_tail(lines=80)
+            )
+        if process.pid is not None and is_pid_running(process.pid):
+            break
+        time.sleep(0.2)
+    else:
+        raise RuntimeError("llama-server no arrancó después de 2s.")
 
     state = {
         "pid": process.pid,
@@ -200,27 +236,14 @@ def stop_llama_server() -> dict[str, Any]:
         clear_server_state()
         return {"stopped": False, "message": "No había un llama-server activo."}
 
-    try:
-        os.killpg(pid, signal.SIGTERM)
-    except Exception:
-        try:
-            os.kill(pid, signal.SIGTERM)
-        except Exception as exc:
-            return {"stopped": False, "message": f"No se pudo detener el proceso: {exc}"}
+    kill_process_group(pid, signal.SIGTERM)
 
-    for _ in range(20):
+    for _ in range(40):
         if not is_pid_running(pid):
             clear_server_state()
             return {"stopped": True, "message": "llama-server detenido correctamente."}
         time.sleep(0.25)
 
-    try:
-        os.killpg(pid, signal.SIGKILL)
-    except Exception:
-        try:
-            os.kill(pid, signal.SIGKILL)
-        except Exception as exc:
-            return {"stopped": False, "message": f"No se pudo forzar cierre del proceso: {exc}"}
-
+    kill_process_group(pid, signal.SIGKILL)
     clear_server_state()
-    return {"stopped": True, "message": "llama-server detenido con SIGKILL."}
+    return {"stopped": True, "message": "llama-server detenido con SIGKILL (timeout 10s)."}

@@ -3,6 +3,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+PROJECT_DIR = Path(__file__).resolve().parent.parent
+
 
 def env(key: str, default: str | None = None) -> str:
     value = os.getenv(key)
@@ -11,9 +13,10 @@ def env(key: str, default: str | None = None) -> str:
     return value
 
 
-DATA_DIR = env("DATA_DIR", "/data")
+DATA_DIR = env("DATA_DIR", str(PROJECT_DIR / "data"))
 DATABASE_URL = env("DATABASE_URL", f"sqlite:///{DATA_DIR}/app.db")
-REDIS_URL = env("REDIS_URL", "redis://redis:6379/0")
+REDIS_URL = env("REDIS_URL", "redis://127.0.0.1:6379/0")
+REDIS_PASSWORD = env("REDIS_PASSWORD", "")
 HUGGING_FACE_TOKEN = env("HUGGING_FACE_TOKEN", "")
 
 DEFAULT_MODELS_DIR = env("DEFAULT_MODELS_DIR", os.path.join(DATA_DIR, "models"))
@@ -67,3 +70,9 @@ DEFAULT_THREADS = int(env("DEFAULT_THREADS", "4"))
 DEFAULT_N_GPU_LAYERS = int(env("DEFAULT_N_GPU_LAYERS", "0"))
 DEFAULT_PUBLIC_HOST = env("DEFAULT_PUBLIC_HOST", "")
 DEFAULT_PUBLIC_PORT = int(env("DEFAULT_PUBLIC_PORT", str(DEFAULT_SERVER_PORT)))
+
+SQLITE_POOL_SIZE = int(env("SQLITE_POOL_SIZE", "5"))
+SQLITE_POOL_TIMEOUT = int(env("SQLITE_POOL_TIMEOUT", "15"))
+SQLITE_MAX_OVERFLOW = int(env("SQLITE_MAX_OVERFLOW", "10"))
+
+MODELS_PAGE_SIZE = int(env("MODELS_PAGE_SIZE", "100"))

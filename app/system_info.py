@@ -30,7 +30,7 @@ def local_ip_candidates() -> list[str]:
 
     try:
         for info in socket.getaddrinfo(socket.gethostname(), None, family=socket.AF_INET):
-            ip = info[4][0]
+            ip = str(info[4][0])
             if ip and not ip.startswith("127.") and ip not in results:
                 results.append(ip)
     except Exception:
