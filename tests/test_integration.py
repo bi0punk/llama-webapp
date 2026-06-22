@@ -1,14 +1,15 @@
+import contextlib
 import os
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
-from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from app.config import DEFAULT_MODELS_DIR
-from app.db import session_scope, engine
+from app.db import engine, session_scope
 from app.main import app
-from app.models import Model, Base
+from app.models import Base, Model
 from app.runtime_settings import update_runtime_settings
 
 
@@ -28,10 +29,8 @@ def configure_binary():
     Path(binary_path).chmod(0o755)
     update_runtime_settings(binary_path=binary_path)
     yield
-    try:
+    with contextlib.suppress(FileNotFoundError):
         Path(binary_path).unlink()
-    except FileNotFoundError:
-        pass
 
 
 @pytest.fixture

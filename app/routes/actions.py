@@ -40,7 +40,7 @@ def save_settings(
     settings = load_runtime_settings()
     settings.binary_path = str(Path(binary_path.strip()).expanduser())
     settings.model_root_dir = str(Path(model_root_dir.strip()).expanduser())
-    settings.server_host = server_host.strip() or "0.0.0.0"
+    settings.server_host = server_host.strip() or "127.0.0.1"
     settings.server_port = int(server_port)
     settings.public_host = public_host.strip() or default_public_host()
     settings.public_port = int(public_port)

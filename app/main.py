@@ -62,6 +62,6 @@ app.include_router(actions.router)
 if __name__ == "__main__":
     import uvicorn
 
-    web_host = os.getenv("WEB_HOST", "0.0.0.0")
+    web_host = os.getenv("WEB_HOST", "127.0.0.1")
     web_port = int(os.getenv("WEB_PORT", "8000"))
     uvicorn.run("app.main:app", host=web_host, port=web_port, reload=False)
