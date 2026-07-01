@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shlex
 import signal
 import subprocess
@@ -15,6 +16,9 @@ import requests
 
 from app.config import LOGS_DIR, SERVER_STATE_PATH
 from app.runtime_settings import RuntimeSettings
+
+# Flags válidos: letras, dígitos, guiones y puntos (con al menos un alnum).
+_ALLOWED_ARG_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 
 def _state_path() -> Path:
@@ -170,7 +174,7 @@ def build_server_command(
         for arg in shlex.split(settings.extra_args):
             if arg.startswith("-"):
                 key = arg.split("=")[0]
-                if not key.lstrip("-").replace("-", "_").replace(".", "").isalnum():
+                if not _ALLOWED_ARG_RE.match(key.lstrip("-")):
                     raise ValueError(f"Argumento no permitido: {arg}")
             cmd.append(arg)
     return cmd

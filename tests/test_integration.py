@@ -35,14 +35,14 @@ def configure_binary():
 
 @pytest.fixture
 def mock_llama_server():
-    with patch('app.llama_server_manager.start_llama_server') as mock:
+    with patch('app.routes.actions.start_llama_server') as mock:
         mock.return_value = True
         yield mock
 
 
 @pytest.fixture
 def mock_cleanup_process():
-    with patch('app.llama_server_manager.cleanup_stale_process') as mock:
+    with patch('app.main.cleanup_stale_process') as mock:
         yield mock
 
 
@@ -71,13 +71,13 @@ def setup_models():
     yield return_id
 
 
-def test_start_llama_server(client, mock_llama_server, mock_cleanup_process, setup_models):
+def test_start_llama_server(client, mock_llama_server, setup_models):
     response = client.post(
         '/server/start',
         data={'model_id': setup_models, 'apply_recommendation': 'true'},
-        allow_redirects=False,
+        follow_redirects=False,
     )
-    print('start response', response.status_code, response.json())
+    print('start response', response.status_code)
     assert response.status_code == 303
     mock_llama_server.assert_called_once()
 
@@ -88,8 +88,11 @@ def test_health_check(client):
     assert 'server_status' in response.json()
 
 
-def test_cleanup_stale_process(client, mock_cleanup_process, setup_models):
-    client.post('/server/start', data={'model_id': setup_models}, allow_redirects=False)
-    response = client.post('/server/stop', allow_redirects=False)
-    assert response.status_code == 303
+def test_cleanup_stale_process(client, mock_llama_server, mock_cleanup_process, setup_models):
+    # El lifespan (startup) se ejecuta al entrar en el context manager,
+    # momento en el que cleanup_stale_process ya está parcheado.
+    with client:
+        client.post('/server/start', data={'model_id': setup_models}, follow_redirects=False)
+        response = client.post('/server/stop', follow_redirects=False)
+        assert response.status_code == 303
     mock_cleanup_process.assert_called_once()
