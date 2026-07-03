@@ -40,7 +40,7 @@ def guess_family(name: str) -> str:
 def estimate_ram_gb(file_size_bytes: int | None) -> float | None:
     if not file_size_bytes:
         return None
-    gb = file_size_bytes / (1024 ** 3)
+    gb = file_size_bytes / (1024**3)
     # rough memory budget for runtime + kv/cache overhead
     return round(max(gb * 1.35, gb + 1.2), 2)
 

@@ -39,9 +39,9 @@ def validate_gguf_header(path: Path) -> tuple[bool, str]:
     if magic != GGUF_MAGIC:
         return False, f"Magic number inválido: {magic!r} (esperado: {GGUF_MAGIC!r})"
 
-    version = struct.unpack("<I", header[GGUF_VERSION_OFFSET:GGUF_VERSION_OFFSET + 4])[0]
-    tensor_count = struct.unpack("<Q", header[GGUF_TENSOR_COUNT_OFFSET:GGUF_TENSOR_COUNT_OFFSET + 8])[0]
-    kv_count = struct.unpack("<Q", header[GGUF_METADATA_KV_COUNT_OFFSET:GGUF_METADATA_KV_COUNT_OFFSET + 8])[0]
+    version = struct.unpack("<I", header[GGUF_VERSION_OFFSET : GGUF_VERSION_OFFSET + 4])[0]
+    tensor_count = struct.unpack("<Q", header[GGUF_TENSOR_COUNT_OFFSET : GGUF_TENSOR_COUNT_OFFSET + 8])[0]
+    kv_count = struct.unpack("<Q", header[GGUF_METADATA_KV_COUNT_OFFSET : GGUF_METADATA_KV_COUNT_OFFSET + 8])[0]
 
     if version < 1 or version > 3:
         return False, f"Versión GGUF no soportada: v{version}"

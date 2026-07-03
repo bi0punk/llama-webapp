@@ -38,13 +38,7 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 def get_models_page(page: int = 1, page_size: int = MODELS_PAGE_SIZE) -> tuple[list[Model], int]:
     with session_scope() as s:
         total = s.query(Model).count()
-        models = (
-            s.query(Model)
-            .order_by(Model.created_at.desc())
-            .offset((page - 1) * page_size)
-            .limit(page_size)
-            .all()
-        )
+        models = s.query(Model).order_by(Model.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
         return models, total
 
 
@@ -126,7 +120,9 @@ def build_curl_examples() -> dict[str, dict[str, str]]:
             "chat": f"curl -s {base}/v1/chat/completions {joined_headers} -d '{chat_payload}'".strip(),
             "completion": (
                 f"curl -s {base}/completion {auth_header} -H 'Content-Type: application/json' -d '{completion_payload}'"
-            ).replace("  ", " ").strip(),
+            )
+            .replace("  ", " ")
+            .strip(),
         }
 
     return {
@@ -136,11 +132,7 @@ def build_curl_examples() -> dict[str, dict[str, str]]:
 
 
 def precompute_profiles(models: list[Model]) -> dict[int, dict[str, Any]]:
-    return {
-        m.id: describe_model(m.local_path or m.name, m.size_bytes)
-        for m in models
-        if m.local_path
-    }
+    return {m.id: describe_model(m.local_path or m.name, m.size_bytes) for m in models if m.local_path}
 
 
 def import_local_models() -> int:

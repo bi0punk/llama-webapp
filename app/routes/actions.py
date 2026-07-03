@@ -93,11 +93,13 @@ def import_registry() -> RedirectResponse:
             key = (entry.get("name"), entry.get("url"))
             if key in existing:
                 continue
-            s.add(Model(
-                name=entry.get("name") or "model.gguf",
-                url=entry.get("url"),
-                source_type=entry.get("source_type", "direct_url"),
-            ))
+            s.add(
+                Model(
+                    name=entry.get("name") or "model.gguf",
+                    url=entry.get("url"),
+                    source_type=entry.get("source_type", "direct_url"),
+                )
+            )
     return RedirectResponse(url="/models", status_code=303)
 
 
@@ -131,6 +133,7 @@ def delete_model(model_id: int):
 
         if model.local_path:
             from contextlib import suppress
+
             with suppress(Exception):
                 Path(model.local_path).unlink(missing_ok=True)
         s.delete(model)

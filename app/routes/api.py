@@ -42,14 +42,16 @@ def health() -> JSONResponse:
     except Exception:
         db_ok = False
 
-    return JSONResponse({
-        "status": "ok",
-        "server_status": status["status"],
-        "model_loaded": status.get("state", {}).get("model_path"),
-        "db_ok": db_ok,
-        "data_dir": DATA_DIR,
-        "logs_dir": LOGS_DIR,
-    })
+    return JSONResponse(
+        {
+            "status": "ok",
+            "server_status": status["status"],
+            "model_loaded": status.get("state", {}).get("model_path"),
+            "db_ok": db_ok,
+            "data_dir": DATA_DIR,
+            "logs_dir": LOGS_DIR,
+        }
+    )
 
 
 @router.get("/partials/jobs_table", response_class=HTMLResponse)
@@ -87,12 +89,14 @@ def api_server_log_tail(lines: int = 150) -> JSONResponse:
 
 @router.get("/api/system/discovery")
 def api_system_discovery() -> JSONResponse:
-    return JSONResponse({
-        "binaries": find_llama_binaries(),
-        "scan_roots": model_scan_roots(),
-        "models_found": scan_model_files(),
-        "system": system_snapshot(),
-    })
+    return JSONResponse(
+        {
+            "binaries": find_llama_binaries(),
+            "scan_roots": model_scan_roots(),
+            "models_found": scan_model_files(),
+            "system": system_snapshot(),
+        }
+    )
 
 
 @router.get("/api/curl_examples")
