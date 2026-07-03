@@ -56,7 +56,7 @@ def health() -> JSONResponse:
 
 @router.get("/partials/jobs_table", response_class=HTMLResponse)
 def jobs_table_partial(request: Request):
-    return templates.TemplateResponse("partials/jobs_table.html", {"request": request, "jobs": get_jobs()})
+    return templates.TemplateResponse(request, "partials/jobs_table.html", {"jobs": get_jobs()})
 
 
 @router.get("/partials/models_table", response_class=HTMLResponse)
@@ -64,9 +64,9 @@ def models_table_partial(request: Request):
     models, _ = get_models_page(page=1, page_size=500)
     profiles = precompute_profiles(models)
     return templates.TemplateResponse(
+        request,
         "partials/models_table.html",
         {
-            "request": request,
             "models": models,
             "profiles": profiles,
         },

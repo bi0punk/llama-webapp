@@ -36,9 +36,9 @@ def server_page(request: Request):
     profiles = precompute_profiles(models)
     curl_examples = build_curl_examples()
     return templates.TemplateResponse(
+        request,
         "server.html",
         {
-            "request": request,
             "settings": settings,
             "server_status": server_status,
             "binaries": binaries,
@@ -59,9 +59,9 @@ def models_page(request: Request, page: int = 1):
     models, total = get_models_page(page=page)
     profiles = precompute_profiles(models)
     return templates.TemplateResponse(
+        request,
         "models.html",
         {
-            "request": request,
             "models": models,
             "profiles": profiles,
             "jobs": get_jobs(),
@@ -78,9 +78,9 @@ def models_page(request: Request, page: int = 1):
 @router.get("/jobs", response_class=HTMLResponse)
 def jobs_page(request: Request):
     return templates.TemplateResponse(
+        request,
         "jobs.html",
         {
-            "request": request,
             "jobs": get_jobs(),
         },
     )
@@ -89,9 +89,9 @@ def jobs_page(request: Request):
 @router.get("/playground", response_class=HTMLResponse)
 def playground_page(request: Request):
     return templates.TemplateResponse(
+        request,
         "playground.html",
         {
-            "request": request,
             "server_status": get_server_status(),
             "settings": load_runtime_settings(),
             "advertised_base_url": advertised_base_url(load_runtime_settings()),
