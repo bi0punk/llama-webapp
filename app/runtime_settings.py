@@ -4,7 +4,7 @@ import json
 import os
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel, ConfigDict
 
@@ -63,7 +63,7 @@ def _apply_payload(settings: RuntimeSettings, payload: dict[str, Any]) -> Runtim
 def load_runtime_settings() -> RuntimeSettings:
     now = time.time()
     if _cache["settings"] is not None and (now - _cache["ts"]) < _cache["ttl"]:
-        return _cache["settings"]
+        return cast(RuntimeSettings, _cache["settings"])
 
     path = Path(SETTINGS_PATH)
     if not path.exists():

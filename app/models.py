@@ -1,9 +1,13 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import DateTime, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC)
 
 
 class Base(DeclarativeBase):
@@ -21,7 +25,7 @@ class Model(Base):
     sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
     size_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="NEW")
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
 
 
 class Job(Base):
@@ -34,4 +38,4 @@ class Job(Base):
     progress: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     message: Mapped[str | None] = mapped_column(Text, nullable=True)
     log_path: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)

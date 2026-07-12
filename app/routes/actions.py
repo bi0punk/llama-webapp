@@ -78,7 +78,7 @@ def add_model(
     name: str = Form(...),
     url: str = Form(...),
     source_type: str = Form("direct_url"),
-):
+) -> RedirectResponse:
     with session_scope() as s:
         s.add(Model(name=name.strip(), url=url.strip(), source_type=source_type.strip() or "direct_url"))
     return RedirectResponse(url="/models", status_code=303)
@@ -119,13 +119,13 @@ def add_and_download(
 
 
 @router.post("/models/{model_id}/download")
-def download_model_action(model_id: int):
+def download_model_action(model_id: int) -> RedirectResponse:
     enqueue_download(model_id)
     return RedirectResponse(url="/models", status_code=303)
 
 
 @router.post("/models/{model_id}/delete")
-def delete_model(model_id: int):
+def delete_model(model_id: int) -> RedirectResponse:
     with session_scope() as s:
         model = s.get(Model, model_id)
         if not model:

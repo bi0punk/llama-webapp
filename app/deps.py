@@ -9,6 +9,21 @@ from fastapi.templating import Jinja2Templates
 from redis import Redis
 from rq import Queue
 
+__all__ = [
+    "advertised_base_url",
+    "build_curl_examples",
+    "enqueue_download",
+    "get_jobs",
+    "get_model_profile",
+    "get_models_page",
+    "import_local_models",
+    "load_registry",
+    "load_runtime_settings",
+    "loopback_base_url",
+    "precompute_profiles",
+    "templates",
+]
+
 from app.config import MODELS_PAGE_SIZE, REDIS_PASSWORD, REDIS_URL
 from app.db import session_scope
 from app.discovery import scan_model_files

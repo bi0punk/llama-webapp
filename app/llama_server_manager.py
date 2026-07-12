@@ -8,9 +8,9 @@ import signal
 import subprocess
 import time
 from contextlib import suppress
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import requests
 
@@ -30,7 +30,7 @@ def load_server_state() -> dict[str, Any]:
     if not path.exists():
         return {}
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        return cast(dict[str, Any], json.loads(path.read_text(encoding="utf-8")))
     except Exception:
         return {}
 
@@ -195,7 +195,7 @@ def start_llama_server(
     cmd = build_server_command(binary_path, model_path, settings)
 
     with open(log_path, "a", encoding="utf-8") as handle:
-        handle.write(f"\n=== {datetime.utcnow().isoformat()}Z starting llama-server ===\n")
+        handle.write(f"\n=== {datetime.now(UTC).isoformat()}Z starting llama-server ===\n")
         handle.write("CMD: " + " ".join(cmd) + "\n")
         handle.flush()
         process = subprocess.Popen(cmd, stdout=handle, stderr=subprocess.STDOUT, start_new_session=True)
@@ -225,7 +225,7 @@ def start_llama_server(
         "threads": settings.threads,
         "n_gpu_layers": settings.n_gpu_layers,
         "extra_args": settings.extra_args,
-        "started_at": datetime.utcnow().isoformat() + "Z",
+        "started_at": datetime.now(UTC).isoformat() + "Z",
         "cmd": cmd,
         "log_path": str(log_path),
     }

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import socket
-from typing import Any
+from typing import Any, cast
 
 
 def cpu_count() -> int:
@@ -13,7 +13,7 @@ def _socket_ip() -> str | None:
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.connect(("8.8.8.8", 80))
-        ip = sock.getsockname()[0]
+        ip: str = cast(str, sock.getsockname()[0])
         sock.close()
         if ip and not ip.startswith("127."):
             return ip

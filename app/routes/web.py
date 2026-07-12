@@ -28,7 +28,7 @@ def root() -> RedirectResponse:
 
 
 @router.get("/server", response_class=HTMLResponse)
-def server_page(request: Request):
+def server_page(request: Request) -> HTMLResponse:
     settings = load_runtime_settings()
     server_status = get_server_status()
     binaries = find_llama_binaries()
@@ -55,7 +55,7 @@ def server_page(request: Request):
 
 
 @router.get("/models", response_class=HTMLResponse)
-def models_page(request: Request, page: int = 1):
+def models_page(request: Request, page: int = 1) -> HTMLResponse:
     models, total = get_models_page(page=page)
     profiles = precompute_profiles(models)
     return templates.TemplateResponse(
@@ -76,7 +76,7 @@ def models_page(request: Request, page: int = 1):
 
 
 @router.get("/jobs", response_class=HTMLResponse)
-def jobs_page(request: Request):
+def jobs_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         request,
         "jobs.html",
@@ -87,7 +87,7 @@ def jobs_page(request: Request):
 
 
 @router.get("/playground", response_class=HTMLResponse)
-def playground_page(request: Request):
+def playground_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         request,
         "playground.html",

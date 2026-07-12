@@ -55,12 +55,12 @@ def health() -> JSONResponse:
 
 
 @router.get("/partials/jobs_table", response_class=HTMLResponse)
-def jobs_table_partial(request: Request):
+def jobs_table_partial(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(request, "partials/jobs_table.html", {"jobs": get_jobs()})
 
 
 @router.get("/partials/models_table", response_class=HTMLResponse)
-def models_table_partial(request: Request):
+def models_table_partial(request: Request) -> HTMLResponse:
     models, _ = get_models_page(page=1, page_size=500)
     profiles = precompute_profiles(models)
     return templates.TemplateResponse(
@@ -115,7 +115,7 @@ def server_log() -> PlainTextResponse:
 
 
 @router.get("/jobs/{job_id}/log", response_class=PlainTextResponse)
-def job_log(job_id: int):
+def job_log(job_id: int) -> PlainTextResponse:
     with session_scope() as s:
         job = s.get(Job, job_id)
         if not job or not job.log_path:
