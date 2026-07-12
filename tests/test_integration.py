@@ -1,12 +1,9 @@
-import contextlib
-import os
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app.config import DEFAULT_MODELS_DIR
 from app.db import engine, session_scope
 from app.main import app
 from app.models import Base, Model
@@ -21,16 +18,13 @@ def setup_database():
 
 
 @pytest.fixture(scope="session", autouse=True)
-def configure_binary():
-    binary_dir = os.path.join(os.getcwd(), "bin")
-    os.makedirs(binary_dir, exist_ok=True)
-    binary_path = os.path.join(binary_dir, "llama-server")
-    Path(binary_path).write_bytes(b"")
-    Path(binary_path).chmod(0o755)
-    update_runtime_settings(binary_path=binary_path)
+def configure_binary(tmp_path_factory: pytest.TempPathFactory):
+    binary_dir = tmp_path_factory.mktemp("bin")
+    binary_path = binary_dir / "llama-server"
+    binary_path.write_bytes(b"")
+    binary_path.chmod(0o755)
+    update_runtime_settings(binary_path=str(binary_path))
     yield
-    with contextlib.suppress(FileNotFoundError):
-        Path(binary_path).unlink()
 
 
 @pytest.fixture
@@ -52,18 +46,20 @@ def client():
 
 
 @pytest.fixture
-def setup_models():
-    local_path = os.path.join(DEFAULT_MODELS_DIR, "test_model.gguf")
-    os.makedirs(os.path.dirname(local_path), exist_ok=True)
-    with open(local_path, "wb") as f:
-        f.write(b"")
+def setup_models(tmp_path: Path):
+    models_dir = tmp_path / "models"
+    models_dir.mkdir(parents=True, exist_ok=True)
+    local_path = models_dir / "test_model.gguf"
+    local_path.write_bytes(b"")
+
+    update_runtime_settings(model_root_dir=str(models_dir))
 
     with session_scope() as session:
         model = Model(
             name="Test Model",
             url="http://example.com/model.gguf",
             source_type="direct_url",
-            local_path=local_path,
+            local_path=str(local_path),
         )
         session.add(model)
         session.commit()
