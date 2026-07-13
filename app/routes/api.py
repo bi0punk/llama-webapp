@@ -9,21 +9,18 @@ from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 
 from app.config import DATA_DIR, LOGS_DIR
 from app.db import session_scope
-from app.deps import (
-    advertised_base_url,
-    build_curl_examples,
-    get_jobs,
-    get_model_profile,
-    get_models_page,
-    load_runtime_settings,
-    loopback_base_url,
-    precompute_profiles,
-    templates,
-)
-from app.discovery import find_llama_binaries, model_scan_roots, scan_model_files
+from app.discovery import model_scan_roots, scan_model_files
 from app.llama_server_manager import get_server_status, server_log_tail
 from app.models import Job
+from app.repositories.job_repo import get_jobs
+from app.repositories.model_repo import get_models_page
+from app.runtime_settings import load_runtime_settings
+from app.services.binary_service import find_llama_binaries
+from app.services.curl_service import build_curl_examples
+from app.services.profile_service import get_model_profile, precompute_profiles
+from app.services.url_service import advertised_base_url, loopback_base_url
 from app.system_info import system_snapshot
+from app.templates import templates
 
 router = APIRouter()
 

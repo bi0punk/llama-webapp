@@ -4,20 +4,18 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.config import HUGGING_FACE_TOKEN
-from app.deps import (
-    advertised_base_url,
-    build_curl_examples,
-    get_jobs,
-    get_models_page,
-    load_registry,
-    load_runtime_settings,
-    loopback_base_url,
-    precompute_profiles,
-    templates,
-)
-from app.discovery import find_llama_binaries, model_scan_roots
+from app.discovery import model_scan_roots
 from app.llama_server_manager import get_server_status, server_log_tail
+from app.repositories.job_repo import get_jobs
+from app.repositories.model_repo import get_models_page
+from app.repositories.registry_repo import load_registry
+from app.runtime_settings import load_runtime_settings
+from app.services.binary_service import find_llama_binaries
+from app.services.curl_service import build_curl_examples
+from app.services.profile_service import precompute_profiles
+from app.services.url_service import advertised_base_url, loopback_base_url
 from app.system_info import system_snapshot
+from app.templates import templates
 
 router = APIRouter()
 

@@ -6,17 +6,21 @@ from fastapi import APIRouter, Form, HTTPException
 from fastapi.responses import RedirectResponse
 
 from app.db import session_scope
-from app.deps import (
-    enqueue_download,
-    get_model_profile,
-    import_local_models,
-    load_registry,
-    load_runtime_settings,
-)
 from app.llama_server_manager import start_llama_server, stop_llama_server
 from app.model_profiles import describe_model
 from app.models import Model
-from app.runtime_settings import save_runtime_settings
+from app.runtime_settings import load_runtime_settings, save_runtime_settings
+from app.services.model_service import (
+    add_and_download_model,
+    delete_model_entry,
+    enqueue_download,
+    import_local_models,
+    import_registry_entries,
+)
+from app.services.model_service import (
+    add_model as add_model_svc,
+)
+from app.services.profile_service import get_model_profile
 from app.system_info import default_public_host
 
 router = APIRouter()
@@ -79,27 +83,13 @@ def add_model(
     url: str = Form(...),
     source_type: str = Form("direct_url"),
 ) -> RedirectResponse:
-    with session_scope() as s:
-        s.add(Model(name=name.strip(), url=url.strip(), source_type=source_type.strip() or "direct_url"))
+    add_model_svc(name, url, source_type)
     return RedirectResponse(url="/models", status_code=303)
 
 
 @router.post("/models/import_registry")
 def import_registry() -> RedirectResponse:
-    entries = load_registry()
-    with session_scope() as s:
-        existing = {(m.name, m.url) for m in s.query(Model).all()}
-        for entry in entries:
-            key = (entry.get("name"), entry.get("url"))
-            if key in existing:
-                continue
-            s.add(
-                Model(
-                    name=entry.get("name") or "model.gguf",
-                    url=entry.get("url"),
-                    source_type=entry.get("source_type", "direct_url"),
-                )
-            )
+    import_registry_entries()
     return RedirectResponse(url="/models", status_code=303)
 
 
@@ -109,12 +99,7 @@ def add_and_download(
     url: str = Form(...),
     source_type: str = Form("direct_url"),
 ) -> RedirectResponse:
-    with session_scope() as s:
-        model = Model(name=name.strip(), url=url.strip(), source_type=source_type.strip() or "direct_url")
-        s.add(model)
-        s.flush()
-        model_id = model.id
-    enqueue_download(model_id)
+    add_and_download_model(name, url, source_type)
     return RedirectResponse(url="/models", status_code=303)
 
 
@@ -126,17 +111,7 @@ def download_model_action(model_id: int) -> RedirectResponse:
 
 @router.post("/models/{model_id}/delete")
 def delete_model(model_id: int) -> RedirectResponse:
-    with session_scope() as s:
-        model = s.get(Model, model_id)
-        if not model:
-            return RedirectResponse(url="/models", status_code=303)
-
-        if model.local_path:
-            from contextlib import suppress
-
-            with suppress(Exception):
-                Path(model.local_path).unlink(missing_ok=True)
-        s.delete(model)
+    delete_model_entry(model_id)
     return RedirectResponse(url="/models", status_code=303)
 
 

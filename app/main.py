@@ -11,13 +11,14 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import DATA_DIR, LOGS_DIR, WEB_TITLE
 from app.db import engine
-from app.deps import BASE_DIR
-from app.discovery import find_llama_server
 from app.llama_server_manager import cleanup_stale_process
 from app.models import Base
 from app.routes import actions, api, web
 from app.runtime_settings import load_runtime_settings, save_runtime_settings
+from app.services.binary_service import find_llama_server
 from app.system_info import default_public_host
+
+APP_DIR = Path(__file__).resolve().parent
 
 
 class _CachedStaticFiles(StaticFiles):
@@ -50,7 +51,7 @@ app = FastAPI(title=WEB_TITLE, lifespan=lifespan)
 
 app.mount(
     "/static",
-    _CachedStaticFiles(directory=str(BASE_DIR / "static")),
+    _CachedStaticFiles(directory=str(APP_DIR / "static")),
     name="static",
 )
 
