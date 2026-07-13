@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from fastapi import HTTPException
 
 from app.models import Job, Model
 from app.repositories.job_repo import create_job, get_jobs, update_job
@@ -16,7 +17,6 @@ from app.repositories.model_repo import (
     serialize_model,
 )
 from app.repositories.registry_repo import load_registry
-
 
 # ── model_repo ────────────────────────────────────────────────────────
 
@@ -61,7 +61,7 @@ def test_get_model_or_404_not_found(mock_scope: MagicMock) -> None:
     mock_session = MagicMock()
     mock_scope.return_value.__enter__.return_value = mock_session
     mock_session.get.return_value = None
-    with pytest.raises(Exception):
+    with pytest.raises(HTTPException):
         get_model_or_404(999)
 
 

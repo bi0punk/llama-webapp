@@ -39,3 +39,26 @@ class Job(Base):
     message: Mapped[str | None] = mapped_column(Text, nullable=True)
     log_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+
+
+class ServerState(Base):
+    __tablename__ = "server_state"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    pid: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    binary_path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    model_path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    model_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    host: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    port: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    alias: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    api_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    ctx_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    threads: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    n_gpu_layers: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    extra_args: Mapped[str | None] = mapped_column(Text, nullable=True)
+    started_at: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    cmd: Mapped[str | None] = mapped_column(Text, nullable=True)
+    log_path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="stopped")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, onupdate=_utcnow)

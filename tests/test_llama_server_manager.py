@@ -40,46 +40,50 @@ def settings() -> RuntimeSettings:
     )
 
 
-@pytest.fixture
-def state_dir(tmp_path: Path) -> Path:
-    return tmp_path / "data"
-
-
 @pytest.fixture(autouse=True)
-def patch_paths(state_dir: Path) -> None:
+def mock_state_repo(tmp_path: Path) -> MagicMock:
+    """Mock the DB-backed state repo so tests don't need a real DB."""
+    state_store: dict[str, object] = {}
+    logs_dir = tmp_path / "logs"
+
+    def _fake_load() -> dict[str, object]:
+        return state_store
+
+    def _fake_save(state: dict[str, object]) -> None:
+        state_store.clear()
+        state_store.update(state)
+
+    def _fake_clear() -> None:
+        state_store.clear()
+
     with (
-        patch("app.llama_server_manager.SERVER_STATE_PATH", str(state_dir / "state.json")),
-        patch("app.llama_server_manager.LOGS_DIR", str(state_dir / "logs")),
+        patch("app.llama_server_manager.load_state", side_effect=_fake_load),
+        patch("app.llama_server_manager.save_state", side_effect=_fake_save),
+        patch("app.llama_server_manager.clear_state", side_effect=_fake_clear),
+        patch("app.llama_server_manager.LOGS_DIR", str(logs_dir)),
     ):
         yield
 
 
-# ── server state (JSON) ──────────────────────────────────────────────
+# ── server state ─────────────────────────────────────────────────────
 
 
-def test_save_and_load_server_state(state_dir: Path) -> None:
+def test_save_and_load_server_state() -> None:
     state = {"pid": 1234, "port": 8081}
     save_server_state(state)
     loaded = load_server_state()
-    assert loaded == state
-    assert (state_dir / "state.json").exists()
+    assert loaded["pid"] == 1234
+    assert loaded["port"] == 8081
 
 
 def test_load_server_state_missing() -> None:
     assert load_server_state() == {}
 
 
-def test_load_server_state_corrupt() -> None:
-    path = Path("app/llama_server_manager").parent / "data" / "state.json"
-    os.makedirs(path.parent, exist_ok=True)
-    path.write_text("not-json", encoding="utf-8")
-    assert load_server_state() == {}
-
-
-def test_clear_server_state(state_dir: Path) -> None:
+def test_clear_server_state() -> None:
     save_server_state({"pid": 1})
     clear_server_state()
-    assert not (state_dir / "state.json").exists()
+    assert load_server_state() == {}
 
 
 # ── PID utils ────────────────────────────────────────────────────────
@@ -122,13 +126,11 @@ def test_kill_process_group_suppresses_error(mock_kill: MagicMock, mock_killpg: 
 def test_cleanup_stale_process_running(
     mock_kill: MagicMock,
     mock_running: MagicMock,
-    state_dir: Path,
 ) -> None:
     mock_running.side_effect = [True, False]
     save_server_state({"pid": 99})
     cleanup_stale_process()
     mock_kill.assert_called_once_with(99, signal.SIGTERM)
-    assert not (state_dir / "state.json").exists()
 
 
 @patch("app.llama_server_manager.is_pid_running", return_value=True)
@@ -136,13 +138,11 @@ def test_cleanup_stale_process_running(
 def test_cleanup_stale_process_needs_sigkill(
     mock_kill: MagicMock,
     mock_running: MagicMock,
-    state_dir: Path,
 ) -> None:
     save_server_state({"pid": 99})
     cleanup_stale_process()
     assert mock_kill.call_count == 2
     mock_kill.assert_has_calls([call(99, signal.SIGTERM), call(99, signal.SIGKILL)])
-    assert not (state_dir / "state.json").exists()
 
 
 @patch("app.llama_server_manager.is_pid_running", return_value=False)
@@ -150,27 +150,26 @@ def test_cleanup_stale_process_needs_sigkill(
 def test_cleanup_stale_process_not_running(
     mock_kill: MagicMock,
     mock_running: MagicMock,
-    state_dir: Path,
 ) -> None:
     save_server_state({"pid": 99})
     cleanup_stale_process()
     mock_kill.assert_not_called()
-    assert not (state_dir / "state.json").exists()
 
 
 # ── server_log_tail ──────────────────────────────────────────────────
 
 
-def test_server_log_tail_no_file(state_dir: Path) -> None:
+def test_server_log_tail_no_file() -> None:
     assert server_log_tail() == "No hay log todavía."
 
 
-def test_server_log_tail_with_content(state_dir: Path) -> None:
-    log_dir = state_dir / "logs"
-    os.makedirs(log_dir, exist_ok=True)
-    log_file = log_dir / "llama_server.log"
+def test_server_log_tail_with_content(tmp_path: Path) -> None:
+    logs_dir = tmp_path / "logs"
+    os.makedirs(logs_dir, exist_ok=True)
+    log_file = logs_dir / "llama_server.log"
     log_file.write_text("line1\nline2\nline3\n", encoding="utf-8")
-    tail = server_log_tail(lines=2)
+    with patch("app.llama_server_manager.LOGS_DIR", str(logs_dir)):
+        tail = server_log_tail(lines=2)
     assert tail == "line2\nline3\n"
 
 
@@ -202,7 +201,6 @@ def test_server_http_status_unreachable(mock_get: MagicMock) -> None:
 def test_get_server_status_running(
     mock_http: MagicMock,
     mock_running: MagicMock,
-    state_dir: Path,
 ) -> None:
     save_server_state({"pid": 42, "port": 8081})
     status = get_server_status()
@@ -211,13 +209,13 @@ def test_get_server_status_running(
 
 
 @patch("app.llama_server_manager.is_pid_running", return_value=False)
-def test_get_server_status_stopped(mock_running: MagicMock, state_dir: Path) -> None:
+def test_get_server_status_stopped(mock_running: MagicMock) -> None:
     save_server_state({"pid": 42})
     status = get_server_status()
     assert status["status"] == "stopped"
 
 
-def test_get_server_status_empty_state(state_dir: Path) -> None:
+def test_get_server_status_empty_state() -> None:
     status = get_server_status()
     assert status["status"] == "stopped"
     assert status["pid"] is None
@@ -274,7 +272,6 @@ def test_start_llama_server_success(
     mock_popen: MagicMock,
     mock_status: MagicMock,
     settings: RuntimeSettings,
-    state_dir: Path,
 ) -> None:
     proc = MagicMock()
     proc.pid = 9999
@@ -308,16 +305,14 @@ def test_start_llama_server_already_running(
 def test_stop_llama_server(
     mock_kill: MagicMock,
     mock_running: MagicMock,
-    state_dir: Path,
 ) -> None:
     save_server_state({"pid": 42})
     result = stop_llama_server()
     assert result["stopped"] is True
-    assert not (state_dir / "state.json").exists()
 
 
 @patch("app.llama_server_manager.is_pid_running", return_value=False)
-def test_stop_llama_server_not_running(mock_running: MagicMock, state_dir: Path) -> None:
+def test_stop_llama_server_not_running(mock_running: MagicMock) -> None:
     save_server_state({"pid": 42})
     result = stop_llama_server()
     assert result["stopped"] is False

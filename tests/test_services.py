@@ -3,12 +3,11 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 from app.models import Model
+from app.runtime_settings import RuntimeSettings
 from app.services.curl_service import build_curl_examples
 from app.services.model_service import enqueue_download, import_local_models
 from app.services.profile_service import get_model_profile, precompute_profiles
 from app.services.url_service import advertised_base_url, loopback_base_url
-from app.runtime_settings import RuntimeSettings
-
 
 # ── url_service ───────────────────────────────────────────────────────
 

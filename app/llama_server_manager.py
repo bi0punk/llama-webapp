@@ -10,41 +10,46 @@ import time
 from contextlib import suppress
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import requests
 
-from app.config import LOGS_DIR, SERVER_STATE_PATH
+from app.config import LOGS_DIR
+from app.repositories.server_state_repo import clear_state, load_state, save_state
 from app.runtime_settings import RuntimeSettings
 
 # Flags válidos: letras, dígitos, guiones y puntos (con al menos un alnum).
 _ALLOWED_ARG_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 
-def _state_path() -> Path:
-    return Path(SERVER_STATE_PATH)
+def _migrate_from_json() -> dict[str, Any]:
+    from app.config import SERVER_STATE_PATH
 
-
-def load_server_state() -> dict[str, Any]:
-    path = _state_path()
+    path = Path(SERVER_STATE_PATH)
     if not path.exists():
         return {}
     try:
-        return cast(dict[str, Any], json.loads(path.read_text(encoding="utf-8")))
+        data: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+        save_state(data)
+        path.unlink(missing_ok=True)
+        return data
     except Exception:
         return {}
 
 
+def load_server_state() -> dict[str, Any]:
+    state = load_state()
+    if not state:
+        state = _migrate_from_json()
+    return state
+
+
 def save_server_state(state: dict[str, Any]) -> None:
-    path = _state_path()
-    os.makedirs(path.parent, exist_ok=True)
-    path.write_text(json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8")
+    save_state(state)
 
 
 def clear_server_state() -> None:
-    path = _state_path()
-    if path.exists():
-        path.unlink()
+    clear_state()
 
 
 def is_pid_running(pid: int | None) -> bool:
