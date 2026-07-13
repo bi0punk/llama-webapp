@@ -37,3 +37,19 @@ def update_job(job_id: int, **kwargs: str | int | None) -> None:
         if job:
             for key, value in kwargs.items():
                 setattr(job, key, value)
+
+
+def cancel_job(job_id: int) -> bool:
+    with session_scope() as s:
+        job = s.get(Job, job_id)
+        if not job or job.status not in ("queued", "downloading"):
+            return False
+        job.status = "cancelled"
+        job.message = "Cancelled by user"
+        if job.rq_job_id:
+            from rq import cancel_job as rq_cancel
+
+            from app.queue import redis_conn
+
+            rq_cancel(job.rq_job_id, connection=redis_conn)
+        return True

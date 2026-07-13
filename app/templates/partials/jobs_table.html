@@ -10,6 +10,7 @@
             <th>Progreso</th>
             <th>Mensaje</th>
             <th>Log</th>
+            <th>Acción</th>
           </tr>
         </thead>
         <tbody>
@@ -35,6 +36,13 @@
             </td>
             <td class="mono">{{ j.message or "" }}</td>
             <td><a class="btn btn-sm btn-outline-secondary" href="/jobs/{{ j.id }}/log" target="_blank">ver</a></td>
+            <td>
+              {% if j.status in ("queued", "running") %}
+              <form method="post" action="/jobs/{{ j.id }}/cancel" style="display:inline">
+                <button class="btn btn-sm btn-outline-danger">cancelar</button>
+              </form>
+              {% endif %}
+            </td>
           </tr>
           {% endfor %}
         </tbody>

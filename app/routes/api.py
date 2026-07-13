@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Generator
 from pathlib import Path
 from typing import Any
 
 import requests
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
 
 from app.config import DATA_DIR, LOGS_DIR
 from app.db import session_scope
@@ -17,6 +18,7 @@ from app.repositories.model_repo import get_models_page
 from app.runtime_settings import load_runtime_settings
 from app.services.binary_service import find_llama_binaries
 from app.services.curl_service import build_curl_examples
+from app.services.profile_preset_service import load_presets
 from app.services.profile_service import get_model_profile, precompute_profiles
 from app.services.url_service import advertised_base_url, loopback_base_url
 from app.system_info import system_snapshot
@@ -101,6 +103,11 @@ def api_curl_examples() -> JSONResponse:
     return JSONResponse(build_curl_examples())
 
 
+@router.get("/api/presets")
+def api_presets() -> JSONResponse:
+    return JSONResponse(load_presets())
+
+
 @router.get("/api/models/{model_id}/profile")
 def api_model_profile(model_id: int) -> JSONResponse:
     return JSONResponse(get_model_profile(model_id))
@@ -109,6 +116,26 @@ def api_model_profile(model_id: int) -> JSONResponse:
 @router.get("/server/log", response_class=PlainTextResponse)
 def server_log() -> PlainTextResponse:
     return PlainTextResponse(server_log_tail())
+
+
+@router.get("/server/log/download", response_class=PlainTextResponse)
+def server_log_download() -> PlainTextResponse:
+    from app.llama_server_manager import _log_path
+
+    path = _log_path()
+    if not path.exists():
+        return PlainTextResponse("No log available.")
+    return PlainTextResponse(path.read_text(encoding="utf-8", errors="ignore"))
+
+
+@router.post("/server/log/clear")
+def server_log_clear() -> JSONResponse:
+    from app.llama_server_manager import _log_path
+
+    path = _log_path()
+    if path.exists():
+        path.write_text("", encoding="utf-8")
+    return JSONResponse({"cleared": True})
 
 
 @router.get("/jobs/{job_id}/log", response_class=PlainTextResponse)
@@ -122,6 +149,52 @@ def job_log(job_id: int) -> PlainTextResponse:
             return PlainTextResponse("Log file not found.")
         text = path.read_text(encoding="utf-8", errors="ignore")
         return PlainTextResponse("\n".join(text.splitlines()[-250:]) + "\n")
+
+
+@router.post("/api/playground/chat/stream")
+def api_playground_chat_stream(payload: dict[str, Any]) -> StreamingResponse:
+    import json as _json
+
+    from app.llama_server_manager import get_server_status
+
+    settings = load_runtime_settings()
+    status = get_server_status()
+    if status["status"] != "running":
+        raise HTTPException(status_code=400, detail="llama-server no está corriendo")
+
+    base_url = loopback_base_url(settings)
+    api_key = status.get("state", {}).get("api_key") or settings.api_key
+    alias = status.get("state", {}).get("alias") or settings.alias
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    body = {
+        "model": alias,
+        "messages": payload.get("messages") or [{"role": "user", "content": payload.get("prompt") or "Hola"}],
+        "temperature": payload.get("temperature", 0.2),
+        "max_tokens": payload.get("max_tokens", 256),
+        "stream": True,
+    }
+
+    def _stream() -> Generator[str, None, None]:
+        try:
+            resp = requests.post(
+                f"{base_url}/v1/chat/completions", headers=headers, json=body, stream=True, timeout=120
+            )
+            for line in resp.iter_lines(decode_unicode=True):
+                if not line or line.startswith(":"):
+                    continue
+                if line.startswith("data: "):
+                    data_str = line[6:]
+                    if data_str.strip() == "[DONE]":
+                        yield "event: done\ndata: {}\n\n"
+                        break
+                    yield f"data: {data_str}\n\n"
+        except Exception as exc:
+            yield f"data: {_json.dumps({'error': str(exc)})}\n\n"
+
+    return StreamingResponse(_stream(), media_type="text/event-stream")
 
 
 @router.post("/api/playground/chat")

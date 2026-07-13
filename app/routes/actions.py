@@ -20,6 +20,7 @@ from app.services.model_service import (
 from app.services.model_service import (
     add_model as add_model_svc,
 )
+from app.services.profile_preset_service import apply_preset
 from app.services.profile_service import get_model_profile
 from app.system_info import default_public_host
 
@@ -71,6 +72,15 @@ def apply_model_profile(model_id: int = Form(...)) -> RedirectResponse:
     return RedirectResponse(url="/server", status_code=303)
 
 
+@router.post("/settings/apply_preset")
+def apply_preset_action(preset_id: str = Form(...)) -> RedirectResponse:
+    try:
+        apply_preset(preset_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return RedirectResponse(url="/server", status_code=303)
+
+
 @router.post("/models/scan_local")
 def scan_local_models() -> RedirectResponse:
     import_local_models()
@@ -113,6 +123,14 @@ def download_model_action(model_id: int) -> RedirectResponse:
 def delete_model(model_id: int) -> RedirectResponse:
     delete_model_entry(model_id)
     return RedirectResponse(url="/models", status_code=303)
+
+
+@router.post("/jobs/{job_id}/cancel")
+def cancel_job_action(job_id: int) -> RedirectResponse:
+    from app.repositories.job_repo import cancel_job as cancel_job_repo
+
+    cancel_job_repo(job_id)
+    return RedirectResponse(url="/jobs", status_code=303)
 
 
 @router.post("/server/start")
