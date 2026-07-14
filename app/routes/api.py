@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Generator
+from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
 from typing import Any
 
-import requests
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
 
@@ -154,6 +153,7 @@ def job_log(job_id: int) -> PlainTextResponse:
 @router.post("/api/playground/chat/stream")
 def api_playground_chat_stream(payload: dict[str, Any]) -> StreamingResponse:
     import json as _json
+    import httpx
 
     from app.llama_server_manager import get_server_status
 
@@ -162,8 +162,13 @@ def api_playground_chat_stream(payload: dict[str, Any]) -> StreamingResponse:
     if status["status"] != "running":
         raise HTTPException(status_code=400, detail="llama-server no está corriendo")
 
+    api_key_header = request.headers.get("X-Api-Key", "")
+    configured_api_key = status.get("state", {}).get("api_key") or settings.api_key
+    if configured_api_key and api_key_header != configured_api_key:
+        raise HTTPException(status_code=401, detail="API key requerida o inválida")
+
     base_url = loopback_base_url(settings)
-    api_key = status.get("state", {}).get("api_key") or settings.api_key
+    api_key = configured_api_key
     alias = status.get("state", {}).get("alias") or settings.alias
     headers = {"Content-Type": "application/json"}
     if api_key:
@@ -177,35 +182,41 @@ def api_playground_chat_stream(payload: dict[str, Any]) -> StreamingResponse:
         "stream": True,
     }
 
-    def _stream() -> Generator[str, None, None]:
+    async def _astream() -> AsyncGenerator[str, None]:
         try:
-            resp = requests.post(
-                f"{base_url}/v1/chat/completions", headers=headers, json=body, stream=True, timeout=120
-            )
-            for line in resp.iter_lines(decode_unicode=True):
-                if not line or line.startswith(":"):
-                    continue
-                if line.startswith("data: "):
-                    data_str = line[6:]
-                    if data_str.strip() == "[DONE]":
-                        yield "event: done\ndata: {}\n\n"
-                        break
-                    yield f"data: {data_str}\n\n"
+            async with httpx.AsyncClient(timeout=120) as client:
+                async with client.stream("POST", f"{base_url}/v1/chat/completions", headers=headers, json=body) as resp:
+                    async for line in resp.aiter_lines():
+                        if not line or line.startswith(":"):
+                            continue
+                        if line.startswith("data: "):
+                            data_str = line[6:]
+                            if data_str.strip() == "[DONE]":
+                                yield "event: done\ndata: {}\n\n"
+                                break
+                            yield f"data: {data_str}\n\n"
         except Exception as exc:
             yield f"data: {_json.dumps({'error': str(exc)})}\n\n"
 
-    return StreamingResponse(_stream(), media_type="text/event-stream")
+    return StreamingResponse(_astream(), media_type="text/event-stream")
 
 
 @router.post("/api/playground/chat")
-def api_playground_chat(payload: dict[str, Any]) -> JSONResponse:
+async def api_playground_chat(payload: dict[str, Any]) -> JSONResponse:
+    import httpx
+
     settings = load_runtime_settings()
     status = get_server_status()
     if status["status"] != "running":
         raise HTTPException(status_code=400, detail="llama-server no está corriendo")
 
+    api_key_header = request.headers.get("X-Api-Key", "")
+    configured_api_key = status.get("state", {}).get("api_key") or settings.api_key
+    if configured_api_key and api_key_header != configured_api_key:
+        raise HTTPException(status_code=401, detail="API key requerida o inválida")
+
     base_url = loopback_base_url(settings)
-    api_key = status.get("state", {}).get("api_key") or settings.api_key
+    api_key = configured_api_key
     alias = status.get("state", {}).get("alias") or settings.alias
     headers = {"Content-Type": "application/json"}
     if api_key:
@@ -220,13 +231,14 @@ def api_playground_chat(payload: dict[str, Any]) -> JSONResponse:
     }
 
     try:
-        response = requests.post(f"{base_url}/v1/chat/completions", headers=headers, json=body, timeout=120)
-        try:
-            payload = response.json()
-        except Exception:
-            payload = {"raw": response.text}
-        return JSONResponse(status_code=response.status_code, content=payload)
-    except requests.HTTPError as exc:
+        async with httpx.AsyncClient(timeout=120) as client:
+            response = await client.post(f"{base_url}/v1/chat/completions", headers=headers, json=body)
+            try:
+                payload = response.json()
+            except Exception:
+                payload = {"raw": response.text}
+            return JSONResponse(status_code=response.status_code, content=payload)
+    except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Error consultando llama-server: {exc}") from exc

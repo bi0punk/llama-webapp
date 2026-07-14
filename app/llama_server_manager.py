@@ -177,10 +177,9 @@ def build_server_command(
         cmd.extend(["--api-key", settings.api_key])
     if settings.extra_args:
         for arg in shlex.split(settings.extra_args):
-            if arg.startswith("-"):
-                key = arg.split("=")[0]
-                if not _ALLOWED_ARG_RE.match(key.lstrip("-")):
-                    raise ValueError(f"Argumento no permitido: {arg}")
+            key = arg.split("=")[0].lstrip("-")
+            if not _ALLOWED_ARG_RE.match(key):
+                raise ValueError(f"Argumento no permitido: {arg}")
             cmd.append(arg)
     return cmd
 
