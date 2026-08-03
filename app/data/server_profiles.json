@@ -1,0 +1,57 @@
+[
+  {
+    "id": "cpu-only",
+    "label": "CPU-only",
+    "description": "Sin GPU. Recomendado para laptops o servidores sin aceleración gráfica.",
+    "settings": {
+      "n_gpu_layers": 0,
+      "threads": 4,
+      "ctx_size": 4096,
+      "extra_args": "--parallel 1 --batch-size 512 --ubatch-size 512"
+    }
+  },
+  {
+    "id": "gpu-low",
+    "label": "GPU baja (≤4 GB VRAM)",
+    "description": "GPU con poca memoria. Descarga ~8-12 capas en GPU, el resto en CPU.",
+    "settings": {
+      "n_gpu_layers": 12,
+      "threads": 4,
+      "ctx_size": 4096,
+      "extra_args": "--parallel 1 --batch-size 256 --ubatch-size 256"
+    }
+  },
+  {
+    "id": "gpu-medium",
+    "label": "GPU media (6-8 GB VRAM)",
+    "description": "GPU de gama media. Descarga ~24-32 capas, permite contexto moderado.",
+    "settings": {
+      "n_gpu_layers": 28,
+      "threads": 6,
+      "ctx_size": 8192,
+      "extra_args": "--parallel 1 --batch-size 512 --ubatch-size 512"
+    }
+  },
+  {
+    "id": "gpu-high",
+    "label": "GPU alta (≥12 GB VRAM)",
+    "description": "GPU con mucha VRAM. Descarga todas las capas, contexto grande.",
+    "settings": {
+      "n_gpu_layers": 999,
+      "threads": 8,
+      "ctx_size": 16384,
+      "extra_args": "--parallel 2 --batch-size 1024 --ubatch-size 512"
+    }
+  },
+  {
+    "id": "low-ram",
+    "label": "RAM baja (<8 GB total)",
+    "description": "Sistema con poca RAM total. Contexto mínimo, batch pequeño.",
+    "settings": {
+      "n_gpu_layers": 0,
+      "threads": 2,
+      "ctx_size": 2048,
+      "extra_args": "--parallel 1 --batch-size 64 --ubatch-size 64"
+    }
+  }
+]

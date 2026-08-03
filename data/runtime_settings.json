@@ -1,0 +1,15 @@
+{
+  "model_root_dir": "/tmp/models",
+  "binary_path": "/usr/bin/llama-server",
+  "server_host": "0.0.0.0",
+  "server_port": 8081,
+  "alias": "test-ai",
+  "ctx_size": 4096,
+  "threads": 16,
+  "n_gpu_layers": 0,
+  "api_key": "",
+  "extra_args": "--parallel 1 --batch-size 512 --ubatch-size 512",
+  "public_host": "192.168.1.25",
+  "public_port": 8081,
+  "last_model_id": 1
+}
