@@ -73,7 +73,6 @@ def test_start_llama_server(client, mock_llama_server, setup_models):
         data={"model_id": setup_models, "apply_recommendation": "true"},
         follow_redirects=False,
     )
-    print("start response", response.status_code)
     assert response.status_code == 303
     mock_llama_server.assert_called_once()
 

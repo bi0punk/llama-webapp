@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator, Generator
+from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Any
 
@@ -151,8 +151,9 @@ def job_log(job_id: int) -> PlainTextResponse:
 
 
 @router.post("/api/playground/chat/stream")
-def api_playground_chat_stream(payload: dict[str, Any]) -> StreamingResponse:
+def api_playground_chat_stream(request: Request, payload: dict[str, Any]) -> StreamingResponse:
     import json as _json
+
     import httpx
 
     from app.llama_server_manager import get_server_status
@@ -184,17 +185,21 @@ def api_playground_chat_stream(payload: dict[str, Any]) -> StreamingResponse:
 
     async def _astream() -> AsyncGenerator[str, None]:
         try:
-            async with httpx.AsyncClient(timeout=120) as client:
-                async with client.stream("POST", f"{base_url}/v1/chat/completions", headers=headers, json=body) as resp:
-                    async for line in resp.aiter_lines():
-                        if not line or line.startswith(":"):
-                            continue
-                        if line.startswith("data: "):
-                            data_str = line[6:]
-                            if data_str.strip() == "[DONE]":
-                                yield "event: done\ndata: {}\n\n"
-                                break
-                            yield f"data: {data_str}\n\n"
+            async with httpx.AsyncClient(timeout=120) as client, client.stream(
+                "POST",
+                f"{base_url}/v1/chat/completions",
+                headers=headers,
+                json=body,
+            ) as resp:
+                async for line in resp.aiter_lines():
+                    if not line or line.startswith(":"):
+                        continue
+                    if line.startswith("data: "):
+                        data_str = line[6:]
+                        if data_str.strip() == "[DONE]":
+                            yield "event: done\ndata: {}\n\n"
+                            break
+                        yield f"data: {data_str}\n\n"
         except Exception as exc:
             yield f"data: {_json.dumps({'error': str(exc)})}\n\n"
 
@@ -202,7 +207,7 @@ def api_playground_chat_stream(payload: dict[str, Any]) -> StreamingResponse:
 
 
 @router.post("/api/playground/chat")
-async def api_playground_chat(payload: dict[str, Any]) -> JSONResponse:
+async def api_playground_chat(request: Request, payload: dict[str, Any]) -> JSONResponse:
     import httpx
 
     settings = load_runtime_settings()

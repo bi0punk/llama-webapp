@@ -17,6 +17,16 @@ jobs:
       - run: uv pip install ruff
       - run: ruff check .
 
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          python-version: "3.12"
+      - run: uv pip install -e . mypy
+      - run: mypy app/ worker.py
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -24,5 +34,19 @@ jobs:
       - uses: astral-sh/setup-uv@v3
         with:
           python-version: "3.12"
-      - run: uv pip install pytest
+      - run: uv pip install -e ".[dev]"
       - run: pytest -q
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build web + worker images
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          targets: web,worker
+          push: false

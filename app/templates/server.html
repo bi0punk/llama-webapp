@@ -17,7 +17,7 @@
         </div>
         <dl class="row mb-0" id="server-status-dl">
           <dt class="col-sm-4">PID</dt><dd class="col-sm-8 mono">{{ server_status.pid or "-" }}</dd>
-          <dt class="col-sm-4">Backend</dt><dd class="col-sm-8 mono">{{ server_status.state.backend_type if server_status.state else settings.backend_type }}</dd>
+          <dt class="col-sm-4">GPU layers</dt><dd class="col-sm-8 mono">{{ server_status.state.n_gpu_layers if server_status.state else settings.n_gpu_layers }}</dd>
           <dt class="col-sm-4">Alias</dt><dd class="col-sm-8 mono">{{ server_status.state.alias if server_status.state else settings.alias }}</dd>
           <dt class="col-sm-4">Puerto</dt><dd class="col-sm-8 mono">{{ server_status.state.port if server_status.state else settings.server_port }}</dd>
           <dt class="col-sm-4">Modelo</dt><dd class="col-sm-8 mono">{{ server_status.state.model_path if server_status.state else "-" }}</dd>

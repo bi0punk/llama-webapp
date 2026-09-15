@@ -3,7 +3,13 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 PROJECT_DIR = Path(__file__).resolve().parent.parent
+
+# Carga las variables del archivo .env (si existe) antes de leer la config.
+# Las variables ya presentes en el entorno prevalecen sobre las del archivo.
+load_dotenv(PROJECT_DIR / ".env")
 
 
 def env(key: str, default: str | None = None) -> str:

@@ -41,7 +41,7 @@ Aplicación web para gestionar modelos GGUF y levantar `llama-server` desde una 
 - **Cola**: Redis + RQ (worker separado para descargas/jobs).
 - **Persistencia**: SQLAlchemy (SQLite en `data/`).
 - **Validación**: Pydantic v2.
-- **Calidad**: ruff (lint+format), mypy (no estricto), pytest.
+- **Calidad**: ruff (lint+format), mypy (strict), pytest.
 - **Empaquetado**: `pyproject.toml` como única fuente de deps; `setuptools` build backend.
 - **Despliegue**: Docker multi-stage (targets `web`/`worker`) + systemd (Linux nativo).
 
@@ -192,6 +192,16 @@ sudo INSTALL_WORKER=no ./scripts/install_systemd.sh
 sudo systemctl enable --now llm-control-center-web
 ```
 
+### Despliegue con Docker Compose
+
+Levanta el stack completo (Redis, web y worker):
+
+```bash
+docker compose up --build
+```
+
+La web queda en `http://localhost:8000`. El `redis` incluye healthcheck y la web/worker dependen de él. El contenedor monta `data_vol` (datos runtime), `models_vol` (modelos `.gguf`) y el binario de `llama.cpp` desde `/opt/llama/bin` en el host (solo lectura); asegúrate de que ese binario exista antes de levantar el stack.
+
 ## Tests
 
 ```bash
@@ -205,15 +215,22 @@ ruff check .
 mypy app/ worker.py
 ```
 
-Cobertura actual:
+Cobertura actual (12 archivos):
 
 - `tests/test_config.py` — carga de configuración.
 - `tests/test_gguf_validation.py` — validación de cabecera GGUF.
 - `tests/test_model_profiles.py` — perfiles y estimación de RAM.
+- `tests/test_binary_service.py` — descubrimiento/versión de binarios.
+- `tests/test_discovery.py` — escaneo de archivos `.gguf`.
+- `tests/test_repositories.py` — repositorios de datos (models, jobs, registry).
+- `tests/test_services.py` — url, profile, curl y model services.
+- `tests/test_llama_server_manager.py` — ciclo de vida del subproceso.
+- `tests/test_tasks.py` — descarga de modelos (url/paths/errores).
+- `tests/test_routes.py` — endpoints HTTP (health, discovery, acciones).
 - `tests/test_integration.py` — ciclo start/stop de `llama-server` vía TestClient + `/health`.
-- `tests/test_smoke.py` — migración RQ en `worker.py`, render de partials (firma `TemplateResponse`) y endpoints de discovery/curl.
+- `tests/test_smoke.py` — migración RQ en `worker.py`, render de partials y endpoints de discovery/curl.
 
-Los tests de integración usan `TestClient` (FastAPI) y levaman una SQLite efímera; no requieren `llama-server` real (se mockea el spawn).
+Los tests de integración usan `TestClient` (FastAPI) y levantan una SQLite efímera; no requieren `llama-server` real (se mockea el spawn).
 
 ## Configuración
 
@@ -227,18 +244,16 @@ Desde la UI en `http://IP_DE_TU_MAQUINA:8000/server`:
 
 Después: escanea o importa modelos locales → selecciona uno → aplica el perfil sugerido (opcional) → inicia `llama-server` → revisa logs.
 
-Variables de entorno (ver `.env.example`): principalmente `HUGGING_FACE_TOKEN` para descargas. El resto de ajustes runtime se persisten en `data/` vía la UI.
+Las variables de entorno son las que define `app/config.py` y `.env.example` (rutas de datos/modelos/binarios, Redis, servidor por defecto, red y `HUGGING_FACE_TOKEN`). La app carga automáticamente el archivo `.env` si existe; las variables ya exportadas en el entorno tienen prioridad. El resto de ajustes runtime se persisten en `data/` vía la UI en `/server`.
 
 ## CI
 
 GitHub Actions (`.github/workflows/ci.yml`) con 4 jobs sobre Python 3.12 / ubuntu-latest, disparados en push y PR a `main`:
 
-- **lint** — `ruff check .` (cubre `app/`, `worker.py`, `tests/`, `scripts/`).
-- **typecheck** — `mypy app/ worker.py`.
-- **test** — servicio `redis:7-alpine` + `pytest -v`.
-- **docker** — `docker build --target web` y `--target worker`.
-
-Usa `actions/setup-python` con `cache: pip` sobre `pyproject.toml`.
+- **lint** — `ruff check .`.
+- **typecheck** — `mypy app/ worker.py` (strict).
+- **test** — instala el paquete con extras de dev y ejecuta `pytest -q` (113 tests).
+- **docker** — `docker build --target web` y `--target worker` (Buildx).
 
 ## Datos
 
@@ -279,8 +294,7 @@ sudo journalctl -u llm-control-center-worker -f
 
 - **Limitación**: no hay autostart del último modelo tras reinicio del host.
 - **Roadmap**: modo “autostart último modelo” para que, tras boot, `llama-server` vuelva a levantar automáticamente con el último `.gguf` usado.
-- **Cobertura de tests**: faltan tests para `routes/`, `llama_server_manager`, `tasks`, `discovery` (los smoke tests actuales cubren lo mínimo).
-- **Mypy no estricto**: `disallow_untyped_defs=false`; endurecerlo requiere anotar el código legacy.
+- **Mypy strict** está activo en `pyproject.toml`; endurecerlo aún más (p. ej. `disallow_untyped_defs`) requiere anotar el código legacy restante.
 
 ## Licencia
 

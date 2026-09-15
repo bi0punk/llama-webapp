@@ -22,7 +22,7 @@ fi
 
 source "$VENV_DIR/bin/activate"
 pip install --upgrade pip
-pip install -r requirements.txt
+pip install -e ".[dev]"
 
 cat <<INFO
 
