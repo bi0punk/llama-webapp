@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Any
@@ -78,6 +79,43 @@ def api_server_status() -> JSONResponse:
     status["advertised_base_url"] = advertised_base_url(settings)
     status["loopback_base_url"] = loopback_base_url(settings)
     return JSONResponse(status)
+
+
+@router.get("/api/server/metrics")
+def api_server_metrics() -> JSONResponse:
+    from app.llama_server_manager import get_server_metrics
+
+    return JSONResponse(get_server_metrics())
+
+
+async def _stream_log_changes(path: Path, initial: str, poll_interval: float = 1.0) -> AsyncGenerator[str, None]:
+    import asyncio
+    import json as _json
+
+    yield f"data: {_json.dumps({'text': '\n'.join(initial.splitlines()[-150:])})}\n\n"
+    last = initial
+    while True:
+        await asyncio.sleep(poll_interval)
+        try:
+            current = path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            current = last
+        if current != last:
+            new_text = current[len(last):] if current.startswith(last) else current
+            yield f"data: {_json.dumps({'text': new_text})}\n\n"
+            last = current
+
+
+@router.get("/api/server/log_stream")
+async def api_server_log_stream() -> StreamingResponse:
+    from app.llama_server_manager import _log_path
+
+    path = _log_path()
+    os.makedirs(path.parent, exist_ok=True)
+    if not path.exists():
+        path.write_text("", encoding="utf-8")
+    initial = path.read_text(encoding="utf-8", errors="ignore")
+    return StreamingResponse(_stream_log_changes(path, initial), media_type="text/event-stream")
 
 
 @router.get("/api/server/log_tail")

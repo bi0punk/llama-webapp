@@ -35,6 +35,7 @@ Aplicación web para gestionar modelos GGUF y levantar `llama-server` desde una 
 - Cola de jobs (RQ + Redis) para descargas en background.
 - Autostart del último modelo tras reinicio del host.
 - Autenticación opcional de la web con token (`LLAMA_WEB_TOKEN`).
+- Métricas en vivo del proceso (CPU/RAM) y log del servidor por streaming SSE.
 
 ## Stack
 

@@ -126,6 +126,88 @@ def server_http_status(state: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _read_proc_stat(pid: int) -> dict[str, Any] | None:
+    try:
+        with open(f"/proc/{pid}/stat", encoding="utf-8") as f:
+            data = f.read()
+    except (OSError, ValueError):
+        return None
+    try:
+        parts = data.rsplit(")", 1)[1].split()
+        utime = int(parts[11])
+        stime = int(parts[12])
+    except (IndexError, ValueError):
+        return None
+    rss: int | None = None
+    try:
+        with open(f"/proc/{pid}/status", encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("VmRSS:"):
+                    rss = int(line.split()[1]) * 1024
+                    break
+    except (OSError, ValueError):
+        pass
+    return {"utime": utime, "stime": stime, "rss": rss}
+
+
+def process_metrics(pid: int, sample_delay: float = 0.6) -> dict[str, Any] | None:
+    first = _read_proc_stat(pid)
+    if not first:
+        return None
+    time.sleep(sample_delay)
+    second = _read_proc_stat(pid)
+    if not second:
+        return None
+
+    clk = float(os.sysconf("SC_CLK_TCK") or 100)
+    total_delta = (second["utime"] + second["stime"]) - (first["utime"] + first["stime"])
+    cpu_percent = min(100.0, total_delta / (sample_delay * clk) * 100.0)
+    return {
+        "cpu_percent": round(cpu_percent, 1),
+        "rss_bytes": second["rss"],
+        "cpu_seconds": round((second["utime"] + second["stime"]) / clk, 1),
+    }
+
+
+def _llama_health_metrics(base_url: str, api_key: str) -> dict[str, Any]:
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+    try:
+        response = requests.get(f"{base_url}/health", headers=headers, timeout=2.0)
+        if not response.ok:
+            return {}
+        data = response.json()
+        slots_idle = data.get("slots_idle")
+        slots_processing = data.get("slots_processing")
+        return {
+            "slots_idle": slots_idle,
+            "slots_processing": slots_processing,
+            "cache_tokens": data.get("cache_tokens"),
+        }
+    except Exception:
+        return {}
+
+
+def get_server_metrics() -> dict[str, Any]:
+    state = load_server_state()
+    pid = state.get("pid")
+    running = is_pid_running(pid)
+
+    base: dict[str, Any] = {"running": running, "pid": pid}
+    if running and pid:
+        metrics = process_metrics(pid)
+        if metrics:
+            base["process"] = metrics
+
+    port = int(state.get("port") or 0)
+    if running and port:
+        api_key = state.get("api_key") or ""
+        health = _llama_health_metrics(f"http://127.0.0.1:{port}", api_key)
+        if health:
+            base["llama"] = health
+
+    return base
+
+
 def get_server_status() -> dict[str, Any]:
     state = load_server_state()
     pid = state.get("pid")

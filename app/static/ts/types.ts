@@ -18,6 +18,17 @@ export interface ServerLogResponse {
   tail: string;
 }
 
+export interface ServerMetrics {
+  running: boolean;
+  pid: number | null;
+  process?: { cpu_percent: number; rss_bytes: number | null; cpu_seconds: number };
+  llama?: { slots_idle?: number; slots_processing?: number; cache_tokens?: number };
+}
+
+export interface LogStreamEvent {
+  text: string;
+}
+
 export interface ChatRequest {
   prompt: string;
   temperature: number;

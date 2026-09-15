@@ -22,6 +22,7 @@
           <dt class="col-sm-4">Puerto</dt><dd class="col-sm-8 mono">{{ server_status.state.port if server_status.state else settings.server_port }}</dd>
           <dt class="col-sm-4">Modelo</dt><dd class="col-sm-8 mono">{{ server_status.state.model_path if server_status.state else "-" }}</dd>
           <dt class="col-sm-4">Binario</dt><dd class="col-sm-8 mono">{{ server_status.state.binary_path if server_status.state else settings.binary_path }}</dd>
+          <dt class="col-sm-4">Uso</dt><dd class="col-sm-8 mono" id="server-metrics">—</dd>
         </dl>
         <div class="d-flex gap-2 mt-3">
           <form method="post" action="/server/stop">
