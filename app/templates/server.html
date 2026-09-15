@@ -92,6 +92,12 @@
             <input name="extra_args" class="form-control mono" value="{{ settings.extra_args }}" placeholder="Ej: --parallel 2 --batch-size 512 --ubatch-size 512">
           </div>
           <div class="col-12">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="autostart_last_model" value="true" id="autostart_last_model" {% if settings.autostart_last_model %}checked{% endif %}>
+              <label class="form-check-label" for="autostart_last_model">Reiniciar automáticamente el último modelo al arrancar la app (autostart)</label>
+            </div>
+          </div>
+          <div class="col-12">
             <button class="btn btn-primary">Guardar configuración</button>
           </div>
         </form>

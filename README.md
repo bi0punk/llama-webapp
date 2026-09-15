@@ -33,6 +33,7 @@ Aplicación web para gestionar modelos GGUF y levantar `llama-server` desde una 
 - Generar ejemplos de `curl` para pruebas rápidas.
 - Ejecutarse como servicio `systemd` en Linux.
 - Cola de jobs (RQ + Redis) para descargas en background.
+- Autostart del último modelo tras reinicio del host.
 
 ## Stack
 
@@ -292,9 +293,7 @@ sudo journalctl -u llm-control-center-worker -f
 
 ## Limitaciones y roadmap
 
-- **Limitación**: no hay autostart del último modelo tras reinicio del host.
-- **Roadmap**: modo “autostart último modelo” para que, tras boot, `llama-server` vuelva a levantar automáticamente con el último `.gguf` usado.
-- **Mypy strict** está activo en `pyproject.toml`; endurecerlo aún más (p. ej. `disallow_untyped_defs`) requiere anotar el código legacy restante.
+- **Roadmap**: endurecer aún más mypy strict (p. ej. `disallow_untyped_defs`) requiere anotar el código legacy restante.
 
 ## Licencia
 

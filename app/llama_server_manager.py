@@ -16,7 +16,7 @@ import requests
 
 from app.config import LOGS_DIR
 from app.repositories.server_state_repo import clear_state, load_state, save_state
-from app.runtime_settings import RuntimeSettings
+from app.runtime_settings import RuntimeSettings, load_runtime_settings
 
 # Flags válidos: letras, dígitos, guiones y puntos (con al menos un alnum).
 _ALLOWED_ARG_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
@@ -235,6 +235,32 @@ def start_llama_server(
     }
     save_server_state(state)
     return state
+
+
+def maybe_autostart_last_model() -> dict[str, Any] | None:
+    """Levanta llama-server con el último modelo usado si autostart está activo."""
+    settings = load_runtime_settings()
+    if not settings.autostart_last_model or not settings.last_model_id:
+        return None
+
+    from app.db import session_scope
+    from app.models import Model
+
+    with session_scope() as s:
+        model = s.get(Model, settings.last_model_id)
+        model_path = model.local_path if model else None
+
+    if not model_path or not Path(model_path).exists():
+        return None
+
+    binary_path = settings.binary_path
+    if not binary_path or not Path(binary_path).expanduser().exists():
+        return None
+
+    try:
+        return start_llama_server(binary_path, model_path, settings, model_id=settings.last_model_id)
+    except RuntimeError:
+        return None
 
 
 def stop_llama_server() -> dict[str, Any]:

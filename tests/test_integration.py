@@ -91,3 +91,27 @@ def test_cleanup_stale_process(client, mock_llama_server, mock_cleanup_process, 
         response = client.post("/server/stop", follow_redirects=False)
         assert response.status_code == 303
     mock_cleanup_process.assert_called_once()
+
+
+@pytest.fixture
+def reset_autostart():
+    yield
+    update_runtime_settings(autostart_last_model=False, last_model_id=None)
+
+
+def test_autostart_last_model(client, mock_cleanup_process, setup_models, reset_autostart):
+    update_runtime_settings(autostart_last_model=True, last_model_id=setup_models)
+    with patch("app.llama_server_manager.start_llama_server") as mock_start:
+        mock_start.return_value = {"pid": 123}
+        with client:
+            pass
+    mock_start.assert_called_once()
+    assert mock_start.call_args.kwargs["model_id"] == setup_models
+
+
+def test_autostart_disabled_does_not_start(client, mock_cleanup_process, setup_models, reset_autostart):
+    update_runtime_settings(autostart_last_model=False, last_model_id=setup_models)
+    with patch("app.llama_server_manager.start_llama_server") as mock_start, client:
+        pass
+    mock_start.assert_not_called()
+

@@ -42,6 +42,7 @@ class RuntimeSettings(BaseSettings):
     public_host: str = DEFAULT_PUBLIC_HOST
     public_port: int = DEFAULT_PUBLIC_PORT
     last_model_id: int | None = None
+    autostart_last_model: bool = False
 
     @field_validator("server_port", "public_port")
     @classmethod

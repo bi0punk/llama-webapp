@@ -41,6 +41,7 @@ def save_settings(
     n_gpu_layers: int = Form(0),
     api_key: str = Form(""),
     extra_args: str = Form(""),
+    autostart_last_model: str | None = Form(None),
 ) -> RedirectResponse:
     settings = load_runtime_settings()
     settings.binary_path = str(Path(binary_path.strip()).expanduser())
@@ -55,6 +56,7 @@ def save_settings(
     settings.n_gpu_layers = int(n_gpu_layers)
     settings.api_key = api_key.strip()
     settings.extra_args = extra_args.strip()
+    settings.autostart_last_model = autostart_last_model is not None
     save_runtime_settings(settings)
     return RedirectResponse(url="/server", status_code=303)
 

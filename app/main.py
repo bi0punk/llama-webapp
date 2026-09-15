@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import DATA_DIR, LOGS_DIR, WEB_TITLE
 from app.db import engine
-from app.llama_server_manager import cleanup_stale_process
+from app.llama_server_manager import cleanup_stale_process, maybe_autostart_last_model
 from app.models import Base
 from app.routes import actions, api, web
 from app.runtime_settings import load_runtime_settings, save_runtime_settings
@@ -44,6 +44,8 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
         settings.binary_path = str(llama_server["path"])
 
     save_runtime_settings(settings)
+    if settings.autostart_last_model:
+        maybe_autostart_last_model()
     yield
 
 
