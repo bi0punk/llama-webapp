@@ -24,6 +24,7 @@ DATABASE_URL = env("DATABASE_URL", f"sqlite:///{DATA_DIR}/app.db")
 REDIS_URL = env("REDIS_URL", "redis://127.0.0.1:6379/0")
 REDIS_PASSWORD = env("REDIS_PASSWORD", "")
 HUGGING_FACE_TOKEN = env("HUGGING_FACE_TOKEN", "")
+WEB_TOKEN = env("LLAMA_WEB_TOKEN", "")
 
 DEFAULT_MODELS_DIR = env("DEFAULT_MODELS_DIR", os.path.join(DATA_DIR, "models"))
 LOGS_DIR = env("LOGS_DIR", os.path.join(DATA_DIR, "logs"))

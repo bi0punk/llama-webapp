@@ -34,6 +34,7 @@ Aplicación web para gestionar modelos GGUF y levantar `llama-server` desde una 
 - Ejecutarse como servicio `systemd` en Linux.
 - Cola de jobs (RQ + Redis) para descargas en background.
 - Autostart del último modelo tras reinicio del host.
+- Autenticación opcional de la web con token (`LLAMA_WEB_TOKEN`).
 
 ## Stack
 
@@ -246,6 +247,10 @@ Desde la UI en `http://IP_DE_TU_MAQUINA:8000/server`:
 Después: escanea o importa modelos locales → selecciona uno → aplica el perfil sugerido (opcional) → inicia `llama-server` → revisa logs.
 
 Las variables de entorno son las que define `app/config.py` y `.env.example` (rutas de datos/modelos/binarios, Redis, servidor por defecto, red y `HUGGING_FACE_TOKEN`). La app carga automáticamente el archivo `.env` si existe; las variables ya exportadas en el entorno tienen prioridad. El resto de ajustes runtime se persisten en `data/` vía la UI en `/server`.
+
+### Proteger la web con token (opcional)
+
+Define `LLAMA_WEB_TOKEN` en el entorno o `.env`. Con token presente, toda la web exige login (`/login`), se firma una cookie de sesión (HMAC, 90 días) y se muestra botón "Cerrar sesión". Sin token, la web queda abierta como antes. `/health` y los estáticos siguen públicos; los endpoints `/api/*` devuelven `401` si no hay sesión.
 
 ## CI
 

@@ -9,6 +9,7 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
+from app.auth import AuthMiddleware
 from app.config import DATA_DIR, LOGS_DIR, WEB_TITLE
 from app.db import engine
 from app.llama_server_manager import cleanup_stale_process, maybe_autostart_last_model
@@ -50,6 +51,7 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 app = FastAPI(title=WEB_TITLE, lifespan=lifespan)
+app.add_middleware(AuthMiddleware)
 
 app.mount(
     "/static",

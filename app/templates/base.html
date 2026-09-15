@@ -24,6 +24,11 @@
       <a class="nav-link" href="/jobs">Jobs</a>
       <a class="nav-link" href="/playground">Playground</a>
     </div>
+    {% if auth_enabled() %}
+    <form method="post" action="/logout" class="ms-auto">
+      <button class="btn btn-sm btn-outline-light">Cerrar sesión</button>
+    </form>
+    {% endif %}
   </div>
 </nav>
 <div class="container-fluid px-4 pb-4">

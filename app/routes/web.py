@@ -1,8 +1,18 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from urllib.parse import unquote
 
+from fastapi import APIRouter, Form, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
+from starlette.responses import Response
+
+from app.auth import (
+    COOKIE_NAME,
+    SESSION_MAX_AGE,
+    auth_enabled,
+    create_session_token,
+    verify_web_token,
+)
 from app.config import HUGGING_FACE_TOKEN
 from app.discovery import model_scan_roots
 from app.llama_server_manager import get_server_status, server_log_tail
@@ -19,6 +29,42 @@ from app.system_info import system_snapshot
 from app.templates import templates
 
 router = APIRouter()
+
+
+@router.get("/login", response_class=HTMLResponse)
+def login_page(request: Request, next: str = "") -> Response:
+    if not auth_enabled():
+        return RedirectResponse(url="/server", status_code=302)
+    return templates.TemplateResponse(request, "login.html", {"next": next, "error": None})
+
+
+@router.post("/login", response_class=HTMLResponse)
+def login(request: Request, token: str = Form(...), next: str = Form("")) -> Response:
+    if not auth_enabled():
+        return RedirectResponse(url="/server", status_code=302)
+    if verify_web_token(token):
+        response = RedirectResponse(url=unquote(next) or "/server", status_code=303)
+        response.set_cookie(
+            COOKIE_NAME,
+            create_session_token(),
+            httponly=True,
+            samesite="lax",
+            max_age=SESSION_MAX_AGE,
+        )
+        return response
+    return templates.TemplateResponse(
+        request,
+        "login.html",
+        {"next": next, "error": "Token incorrecto"},
+        status_code=401,
+    )
+
+
+@router.post("/logout", response_class=HTMLResponse)
+def logout() -> Response:
+    response = RedirectResponse(url="/login", status_code=303)
+    response.delete_cookie(COOKIE_NAME)
+    return response
 
 
 @router.get("/", response_class=HTMLResponse)
