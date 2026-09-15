@@ -260,7 +260,7 @@ GitHub Actions (`.github/workflows/ci.yml`) con 4 jobs sobre Python 3.12 / ubunt
 
 - **lint** — `ruff check .`.
 - **typecheck** — `mypy app/ worker.py` (strict).
-- **test** — instala el paquete con extras de dev y ejecuta `pytest -q` (113 tests).
+- **test** — instala el paquete con extras de dev y ejecuta `pytest -q --cov=app --cov=worker` (134 tests, ~82% cobertura).
 - **docker** — `docker build --target web` y `--target worker` (Buildx).
 
 ## Datos

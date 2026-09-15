@@ -3,37 +3,64 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from dotenv import load_dotenv
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 
-# Carga las variables del archivo .env (si existe) antes de leer la config.
-# Las variables ya presentes en el entorno prevalecen sobre las del archivo.
-load_dotenv(PROJECT_DIR / ".env")
+# Las variables ya exportadas en el entorno prevalecen sobre las del archivo .env.
+# pydantic-settings carga .env automáticamente y las variables de entorno tienen prioridad.
 
 
-def env(key: str, default: str | None = None) -> str:
-    value = os.getenv(key)
-    if value is None or value == "":
-        return "" if default is None else default
-    return value
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=str(PROJECT_DIR / ".env"), extra="ignore")
+
+    data_dir: str = str(PROJECT_DIR / "data")
+    database_url: str = ""
+    redis_url: str = "redis://127.0.0.1:6379/0"
+    redis_password: str = ""
+    hugging_face_token: str = ""
+    web_token: str = ""
+    default_models_dir: str = ""
+    logs_dir: str = ""
+    settings_path: str = ""
+    server_state_path: str = ""
+    llama_run_bin: str = "/opt/llama/bin/llama-run"
+    llama_cli_bin: str = "/opt/llama/bin/llama-cli"
+    llama_server_bin: str = "/opt/llama/bin/llama-server"
+    llama_search_paths: str = ""
+    model_scan_paths: str = ""
+    web_title: str = "Llama Control Center"
+    default_server_host: str = "127.0.0.1"
+    default_server_port: int = 8081
+    default_server_alias: str = "llama-local"
+    default_ctx_size: int = 4096
+    default_threads: int = 4
+    default_n_gpu_layers: int = 0
+    default_public_host: str = ""
+    default_public_port: int = 8081
+    sqlite_pool_size: int = 5
+    sqlite_pool_timeout: int = 15
+    sqlite_max_overflow: int = 10
+    models_page_size: int = 100
 
 
-DATA_DIR = env("DATA_DIR", str(PROJECT_DIR / "data"))
-DATABASE_URL = env("DATABASE_URL", f"sqlite:///{DATA_DIR}/app.db")
-REDIS_URL = env("REDIS_URL", "redis://127.0.0.1:6379/0")
-REDIS_PASSWORD = env("REDIS_PASSWORD", "")
-HUGGING_FACE_TOKEN = env("HUGGING_FACE_TOKEN", "")
-WEB_TOKEN = env("LLAMA_WEB_TOKEN", "")
+_settings = Settings()
 
-DEFAULT_MODELS_DIR = env("DEFAULT_MODELS_DIR", os.path.join(DATA_DIR, "models"))
-LOGS_DIR = env("LOGS_DIR", os.path.join(DATA_DIR, "logs"))
-SETTINGS_PATH = env("SETTINGS_PATH", os.path.join(DATA_DIR, "runtime_settings.json"))
-SERVER_STATE_PATH = env("SERVER_STATE_PATH", os.path.join(DATA_DIR, "llama_server_state.json"))
+DATA_DIR = _settings.data_dir
+DATABASE_URL = _settings.database_url or f"sqlite:///{DATA_DIR}/app.db"
+REDIS_URL = _settings.redis_url
+REDIS_PASSWORD = _settings.redis_password
+HUGGING_FACE_TOKEN = _settings.hugging_face_token
+WEB_TOKEN = _settings.web_token
 
-LLAMA_RUN_BIN = env("LLAMA_RUN_BIN", "/opt/llama/bin/llama-run")
-LLAMA_CLI_BIN = env("LLAMA_CLI_BIN", "/opt/llama/bin/llama-cli")
-LLAMA_SERVER_BIN = env("LLAMA_SERVER_BIN", "/opt/llama/bin/llama-server")
+DEFAULT_MODELS_DIR = _settings.default_models_dir or os.path.join(DATA_DIR, "models")
+LOGS_DIR = _settings.logs_dir or os.path.join(DATA_DIR, "logs")
+SETTINGS_PATH = _settings.settings_path or os.path.join(DATA_DIR, "runtime_settings.json")
+SERVER_STATE_PATH = _settings.server_state_path or os.path.join(DATA_DIR, "llama_server_state.json")
+
+LLAMA_RUN_BIN = _settings.llama_run_bin
+LLAMA_CLI_BIN = _settings.llama_cli_bin
+LLAMA_SERVER_BIN = _settings.llama_server_bin
 
 DEFAULT_BINARY_CANDIDATES = [
     LLAMA_SERVER_BIN,
@@ -65,21 +92,21 @@ DEFAULT_MODEL_SCAN_PATHS = [
     str(Path.home() / "Modelos"),
 ]
 
-EXTRA_LLAMA_SEARCH_PATHS = [p for p in env("LLAMA_SEARCH_PATHS", "").split(":") if p]
-EXTRA_MODEL_SCAN_PATHS = [p for p in env("MODEL_SCAN_PATHS", "").split(":") if p]
+EXTRA_LLAMA_SEARCH_PATHS = [p for p in _settings.llama_search_paths.split(":") if p]
+EXTRA_MODEL_SCAN_PATHS = [p for p in _settings.model_scan_paths.split(":") if p]
 
-WEB_TITLE = env("WEB_TITLE", "Llama Control Center")
-DEFAULT_SERVER_HOST = env("DEFAULT_SERVER_HOST", "127.0.0.1")
-DEFAULT_SERVER_PORT = int(env("DEFAULT_SERVER_PORT", "8081"))
-DEFAULT_SERVER_ALIAS = env("DEFAULT_SERVER_ALIAS", "llama-local")
-DEFAULT_CTX_SIZE = int(env("DEFAULT_CTX_SIZE", "4096"))
-DEFAULT_THREADS = int(env("DEFAULT_THREADS", "4"))
-DEFAULT_N_GPU_LAYERS = int(env("DEFAULT_N_GPU_LAYERS", "0"))
-DEFAULT_PUBLIC_HOST = env("DEFAULT_PUBLIC_HOST", "")
-DEFAULT_PUBLIC_PORT = int(env("DEFAULT_PUBLIC_PORT", str(DEFAULT_SERVER_PORT)))
+WEB_TITLE = _settings.web_title
+DEFAULT_SERVER_HOST = _settings.default_server_host
+DEFAULT_SERVER_PORT = _settings.default_server_port
+DEFAULT_SERVER_ALIAS = _settings.default_server_alias
+DEFAULT_CTX_SIZE = _settings.default_ctx_size
+DEFAULT_THREADS = _settings.default_threads
+DEFAULT_N_GPU_LAYERS = _settings.default_n_gpu_layers
+DEFAULT_PUBLIC_HOST = _settings.default_public_host
+DEFAULT_PUBLIC_PORT = _settings.default_public_port
 
-SQLITE_POOL_SIZE = int(env("SQLITE_POOL_SIZE", "5"))
-SQLITE_POOL_TIMEOUT = int(env("SQLITE_POOL_TIMEOUT", "15"))
-SQLITE_MAX_OVERFLOW = int(env("SQLITE_MAX_OVERFLOW", "10"))
+SQLITE_POOL_SIZE = _settings.sqlite_pool_size
+SQLITE_POOL_TIMEOUT = _settings.sqlite_pool_timeout
+SQLITE_MAX_OVERFLOW = _settings.sqlite_max_overflow
 
-MODELS_PAGE_SIZE = int(env("MODELS_PAGE_SIZE", "100"))
+MODELS_PAGE_SIZE = _settings.models_page_size
