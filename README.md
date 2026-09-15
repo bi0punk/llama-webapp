@@ -36,6 +36,7 @@ Aplicación web para gestionar modelos GGUF y levantar `llama-server` desde una 
 - Autostart del último modelo tras reinicio del host.
 - Autenticación opcional de la web con token (`LLAMA_WEB_TOKEN`).
 - Métricas en vivo del proceso (CPU/RAM) y log del servidor por streaming SSE.
+- Búsqueda de modelos y descarga de archivos `.gguf` directamente desde HuggingFace en la web.
 
 ## Stack
 

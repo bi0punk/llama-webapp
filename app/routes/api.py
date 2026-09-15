@@ -145,6 +145,20 @@ def api_presets() -> JSONResponse:
     return JSONResponse(load_presets())
 
 
+@router.get("/api/hf/search")
+def api_hf_search(q: str, limit: int = 10) -> JSONResponse:
+    from app.services.huggingface_service import search_hf
+
+    return JSONResponse({"query": q, "results": search_hf(q, limit=min(max(limit, 1), 25))})
+
+
+@router.get("/api/hf/files")
+def api_hf_files(repo: str) -> JSONResponse:
+    from app.services.huggingface_service import list_gguf_files
+
+    return JSONResponse({"repo": repo, "files": list_gguf_files(repo)})
+
+
 @router.get("/api/models/{model_id}/profile")
 def api_model_profile(model_id: int) -> JSONResponse:
     return JSONResponse(get_model_profile(model_id))
