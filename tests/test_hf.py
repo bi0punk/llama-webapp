@@ -29,9 +29,7 @@ def test_search_hf_parses_results(mock_get):
         {"id": "org/model", "downloads": 1200, "likes": 34, "tags": ["llama", "gguf"]}
     ]
     results = search_hf("llama", limit=5)
-    assert results == [
-        {"id": "org/model", "downloads": 1200, "likes": 34, "tags": ["llama", "gguf"]}
-    ]
+    assert results == [{"id": "org/model", "downloads": 1200, "likes": 34, "tags": ["llama", "gguf"]}]
     args, kwargs = mock_get.call_args
     assert kwargs["params"]["search"] == "llama"
     assert kwargs["params"]["limit"] == 5

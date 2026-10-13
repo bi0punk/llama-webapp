@@ -45,15 +45,15 @@ class RuntimeSettings(BaseSettings):
     autostart_last_model: bool = False
 
     @field_validator("server_port", "public_port")
-    @classmethod
-    def _valid_port(cls, v: int) -> int:
+    @staticmethod
+    def _valid_port(v: int) -> int:
         if v < 1 or v > 65535:
             raise ValueError(f"Port must be between 1 and 65535, got {v}")
         return v
 
     @field_validator("ctx_size")
-    @classmethod
-    def _valid_ctx_size(cls, v: int) -> int:
+    @staticmethod
+    def _valid_ctx_size(v: int) -> int:
         if v < 512:
             raise ValueError(f"ctx_size must be >= 512, got {v}")
         if v & (v - 1) != 0:
@@ -61,8 +61,8 @@ class RuntimeSettings(BaseSettings):
         return v
 
     @field_validator("threads")
-    @classmethod
-    def _valid_threads(cls, v: int) -> int:
+    @staticmethod
+    def _valid_threads(v: int) -> int:
         if v < 1:
             raise ValueError(f"threads must be >= 1, got {v}")
         if v > 256:
@@ -70,8 +70,8 @@ class RuntimeSettings(BaseSettings):
         return v
 
     @field_validator("n_gpu_layers")
-    @classmethod
-    def _valid_gpu_layers(cls, v: int) -> int:
+    @staticmethod
+    def _valid_gpu_layers(v: int) -> int:
         if v < 0:
             raise ValueError(f"n_gpu_layers must be >= 0, got {v}")
         return v

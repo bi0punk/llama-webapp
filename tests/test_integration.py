@@ -114,4 +114,3 @@ def test_autostart_disabled_does_not_start(client, mock_cleanup_process, setup_m
     with patch("app.llama_server_manager.start_llama_server") as mock_start, client:
         pass
     mock_start.assert_not_called()
-

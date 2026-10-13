@@ -33,3 +33,5 @@ node_modules/
 .coverage
 .coverage.*
 htmlcov/
+# Frontend sourcemaps (build artifacts)
+*.map

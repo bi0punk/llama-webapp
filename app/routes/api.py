@@ -101,7 +101,7 @@ async def _stream_log_changes(path: Path, initial: str, poll_interval: float = 1
         except OSError:
             current = last
         if current != last:
-            new_text = current[len(last):] if current.startswith(last) else current
+            new_text = current[len(last) :] if current.startswith(last) else current
             yield f"data: {_json.dumps({'text': new_text})}\n\n"
             last = current
 
@@ -217,12 +217,15 @@ def api_playground_chat_stream(request: Request, payload: dict[str, Any]) -> Str
 
     async def _astream() -> AsyncGenerator[str, None]:
         try:
-            async with httpx.AsyncClient(timeout=120) as client, client.stream(
-                "POST",
-                f"{base_url}/v1/chat/completions",
-                headers=headers,
-                json=body,
-            ) as resp:
+            async with (
+                httpx.AsyncClient(timeout=120) as client,
+                client.stream(
+                    "POST",
+                    f"{base_url}/v1/chat/completions",
+                    headers=headers,
+                    json=body,
+                ) as resp,
+            ):
                 async for line in resp.aiter_lines():
                     if not line or line.startswith(":"):
                         continue
