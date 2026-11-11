@@ -3,6 +3,8 @@
 Dos procesos: **web** (FastAPI + UI) y **worker** (RQ), con **Redis** como
 broker. Los contenedores publicados corren como uid 10001.
 
+> Las imágenes publicadas usan **Python 3.15**. Para el entorno local se recomienda 3.12+.
+
 ## 1. Docker Compose (recomendado)
 
 ```bash
