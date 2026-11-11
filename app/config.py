@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
@@ -19,7 +20,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://127.0.0.1:6379/0"
     redis_password: str = ""
     hugging_face_token: str = ""
-    web_token: str = ""
+    web_token: str = Field(default="", validation_alias=AliasChoices("WEB_TOKEN", "LLAMA_WEB_TOKEN"))
     default_models_dir: str = ""
     logs_dir: str = ""
     settings_path: str = ""
