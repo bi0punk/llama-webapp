@@ -44,17 +44,34 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    name: test (py${{ matrix.python-version }})
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
       - name: Crear entorno virtual
-        run: uv venv --python 3.12
+        run: uv venv --python ${{ matrix.python-version }}
       - name: Instalar proyecto y dev
         run: uv pip install -e ".[dev]"
-      - name: Pytest
-        run: .venv/bin/pytest -q --cov=app --cov=worker --cov-report=term-missing:skip-covered
+      - name: Pytest con cobertura
+        run: .venv/bin/pytest -q --cov=app --cov=worker --cov-report=term-missing:skip-covered --cov-fail-under=75
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv venv --python 3.12
+      - run: uv pip install -e .
+      - run: uv pip install pip-audit
+      - run: .venv/bin/pip-audit --skip-editable
 
   docker:
     runs-on: ubuntu-latest
