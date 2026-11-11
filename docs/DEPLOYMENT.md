@@ -27,6 +27,9 @@ Servicios:
 | `web` | `ghcr.io/bi0punk/llama-webapp` | FastAPI, UI, API, spawn de `llama-server` |
 | `worker` | `ghcr.io/bi0punk/llama-webapp-worker` | Descargas y tareas largas |
 
+Las imágenes de GHCR corresponden a la **versión 1.0.0** (histórico); el compose
+local las construye con `build:`.
+
 Volúmenes: `data_vol` (SQLite, logs, settings) y `models_vol` (GGUF). El binario
 de `llama.cpp` se monta desde el host:
 
