@@ -89,7 +89,7 @@ llama-webapp/
 │   ├── templates/                  # Jinja2 (base, server, models, jobs, playground…)
 │   └── static/                     # JS/TS (hf, playground, server, types)
 ├── worker.py                       # Worker RQ (cola Redis)
-├── tests/                          # Suite pytest (12 archivos)
+├── tests/                          # Suite pytest (18 archivos)
 ├── scripts/                        # bootstrap, start_web, start_worker, install_systemd
 ├── deploy/systemd/                 # Plantillas de servicios + env example
 ├── examples/curl_examples.sh       # Ejemplos de consumo
