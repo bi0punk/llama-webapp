@@ -2,7 +2,6 @@
 
 Aplicación web para gestionar modelos GGUF y levantar `llama-server` desde una interfaz FastAPI, con foco en Linux nativo. Eliges el binario `llama-server`, defines la carpeta de modelos, levantas el servidor desde la web, ves los logs y dejas el endpoint disponible para otras máquinas de la misma red.
 
-[![CI](https://github.com/bi0punk/llama-webapp/actions/workflows/ci.yml/badge.svg)](https://github.com/bi0punk/llama-webapp/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -262,15 +261,9 @@ mypy app/ worker.py
 Cobertura actual: **82 %** (gate 75 %). Los tests usan SQLite efímera,
 `TestClient` y mocks de `llama-server`/Redis: no necesitan binarios ni GPU.
 
-CI (`.github/workflows/ci.yml`), disparado en `dev`, `main` y tags `v*`:
-
-| Job | Qué hace |
-|---|---|
-| `lint` | `ruff check .` |
-| `typecheck` | `mypy app/ worker.py` (strict) |
-| `test (3.12 / 3.13)` | pytest + cobertura (gate 75 %) |
-| `audit` | `pip-audit` sobre las dependencias |
-| `docker (web / worker)` | build y publicación en GHCR en `main`/tags |
+GitHub solo aloja el código. La integración continua y el despliegue se
+ejecutan en GitLab/entorno local; los workflows de `.github/` están
+deshabilitados en GitHub. La validación es la de la sección anterior.
 
 ## Salud y observabilidad
 
