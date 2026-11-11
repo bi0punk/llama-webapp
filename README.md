@@ -254,39 +254,53 @@ Define `LLAMA_WEB_TOKEN` en el entorno o `.env`. Con token presente, toda la web
 ## Tests / CI
 
 ```bash
-pytest -v
-```
-
-Calidad estática:
-
-```bash
+pytest -q --cov=app --cov=worker --cov-report=term-missing --cov-fail-under=75
 ruff check .
 mypy app/ worker.py
 ```
 
-Cobertura actual (12 archivos):
+Cobertura actual: **82 %** (gate 75 %). Los tests usan SQLite efímera,
+`TestClient` y mocks de `llama-server`/Redis: no necesitan binarios ni GPU.
 
-- `tests/test_config.py` — carga de configuración.
-- `tests/test_gguf_validation.py` — validación de cabecera GGUF.
-- `tests/test_model_profiles.py` — perfiles y estimación de RAM.
-- `tests/test_binary_service.py` — descubrimiento/versión de binarios.
-- `tests/test_discovery.py` — escaneo de archivos `.gguf`.
-- `tests/test_repositories.py` — repositorios de datos (models, jobs, registry).
-- `tests/test_services.py` — url, profile, curl y model services.
-- `tests/test_llama_server_manager.py` — ciclo de vida del subproceso.
-- `tests/test_tasks.py` — descarga de modelos (url/paths/errores).
-- `tests/test_routes.py` — endpoints HTTP (health, discovery, acciones).
-- `tests/test_integration.py` — ciclo start/stop de `llama-server` vía TestClient + `/health`.
-- `tests/test_smoke.py` — migración RQ en `worker.py`, render de partials y endpoints de discovery/curl.
+CI (`.github/workflows/ci.yml`), disparado en `dev`, `main` y tags `v*`:
 
-Los tests de integración usan `TestClient` (FastAPI) y levantan una SQLite efímera; no requieren `llama-server` real (se mockea el spawn).
+| Job | Qué hace |
+|---|---|
+| `lint` | `ruff check .` |
+| `typecheck` | `mypy app/ worker.py` (strict) |
+| `test (3.12 / 3.13)` | pytest + cobertura (gate 75 %) |
+| `audit` | `pip-audit` sobre las dependencias |
+| `docker (web / worker)` | build y publicación en GHCR en `main`/tags |
 
-CI — GitHub Actions (`.github/workflows/ci.yml`), 4 jobs sobre Python 3.12 / ubuntu-latest, disparados en push y PR a `main`/`master`:
+## Salud y observabilidad
 
-- **lint** — `ruff check .`.
-- **typecheck** — `mypy app/ worker.py` (strict).
-- **test** — instala el paquete con extras de dev y ejecuta `pytest -q --cov=app --cov=worker`.
-- **docker** — `docker build --target web` y `--target worker` (Buildx).
+| Señal | Dónde | Qué indica |
+|---|---|---|
+| `/health` | `http://localhost:8000/health` | Proceso vivo (público) |
+| `/api/...` | dashboard/API | Estado de modelos, jobs y servidor |
+| Healthcheck web | Docker | `/health` responde 200 |
+| RQ | Redis | Cola `default` y jobs en `data/` |
+
+```bash
+curl -fsS http://localhost:8000/health
+docker inspect --format '{{.State.Health.Status}}' llama-webapp
+```
+
+## Despliegue
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+```
+
+- Web: <http://localhost:8000>
+- Worker RQ: consume la cola `default` de Redis.
+- Imágenes: `ghcr.io/bi0punk/llama-webapp:latest` y
+  `ghcr.io/bi0punk/llama-webapp-worker:latest`.
+- Los contenedores corren como **uid 10001**; los volúmenes `data_vol` y
+  `models_vol` heredan el dueño correcto.
+
+Guía completa en [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Datos
 
