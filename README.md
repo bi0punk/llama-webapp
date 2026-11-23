@@ -211,10 +211,11 @@ sudo systemctl enable --now llm-control-center-web
 ### Despliegue con Docker Compose
 
 ```bash
+cp .env.example .env   # requerido por env_file; ajusta WEB_TOKEN, HUGGING_FACE_TOKEN, etc.
 docker compose up --build
 ```
 
-La web queda en `http://localhost:8000`. El `redis` incluye healthcheck y la web/worker dependen de él. El contenedor monta `data_vol` (datos runtime), `models_vol` (modelos `.gguf`) y el binario de `llama.cpp` desde `/opt/llama/bin` en el host (solo lectura); asegúrate de que ese binario exista antes de levantar el stack.
+La web queda en `http://localhost:8000`. El `redis` incluye healthcheck y la web/worker dependen de él. El contenedor monta `data_vol` (datos runtime), `models_vol` (modelos `.gguf`) y el binario de `llama.cpp` desde el directorio del host indicado por `LLAMA_BIN_DIR` (por defecto `/usr/local/bin`) en `/opt/llama/bin` (solo lectura); asegúrate de que `llama-server` exista en ese directorio antes de levantar el stack. El `docker-compose.yml` lee `.env` vía `env_file`, y fuerza `DATA_DIR=/data` y `DEFAULT_MODELS_DIR=/models` dentro de los contenedores.
 
 ## Configuración
 
@@ -236,7 +237,7 @@ Variables principales (ver `.env.example`):
 |-----------------------|-----------------------------------|-------------------------------------------|
 | `DATA_DIR`            | `data/` (ruta del proyecto)       | Directorio de datos, logs y SQLite        |
 | `REDIS_URL`           | `redis://127.0.0.1:6379/0`        | Broker/cola de jobs                       |
-| `DEFAULT_MODELS_DIR`  | `data/models`                     | Carpeta de modelos `.gguf`                |
+| `DEFAULT_MODELS_DIR`  | `models/` (ruta del proyecto)     | Carpeta de modelos `.gguf`                |
 | `LLAMA_SEARCH_PATHS`  | —                                 | Rutas extra de binarios (separadas por `:`) |
 | `MODEL_SCAN_PATHS`    | —                                 | Rutas extra de escaneo de `.gguf`         |
 | `LLAMA_SERVER_BIN`    | `/opt/llama/bin/llama-server`     | Binario por defecto                      |
@@ -276,7 +277,7 @@ la de la sección anterior.
 
 ```bash
 curl -fsS http://localhost:8000/health
-docker inspect --format '{{.State.Health.Status}}' llama-webapp
+docker inspect --format '{{.State.Health.Status}}' "$(docker compose ps -q web)"
 ```
 
 ## Despliegue

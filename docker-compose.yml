@@ -23,9 +23,12 @@ services:
       - no-new-privileges:true
     ports:
       - "8000:8000"
+    env_file:
+      - .env
     environment:
       REDIS_URL: redis://redis:6379/0
       DATA_DIR: /data
+      DEFAULT_MODELS_DIR: /models
       WEB_HOST: "0.0.0.0"
       WEB_PORT: "8000"
     volumes:
@@ -55,9 +58,12 @@ services:
     init: true
     security_opt:
       - no-new-privileges:true
+    env_file:
+      - .env
     environment:
       REDIS_URL: redis://redis:6379/0
       DATA_DIR: /data
+      DEFAULT_MODELS_DIR: /models
     volumes:
       - data_vol:/data
       - models_vol:/models
